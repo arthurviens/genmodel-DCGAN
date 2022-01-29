@@ -166,14 +166,16 @@ class Data_Loaders():
                                                Rescale(256),
                                                RandomCrop(224),
                                                Grayscale(),
-                                               ToTensor()
+                                               ToTensor(),
+                                               transforms.Normalize((0,), (1,)),
                                            ]))
         self.test_set = CustomDataset(os.path.join(self.root_dir, "test"), 
                         transform = transforms.Compose([
                                                Rescale(256),
                                                RandomCrop(224),
                                                Grayscale(),
-                                               ToTensor()
+                                               ToTensor(),
+                                               transforms.Normalize((0,), (1,))
                                            ]))
 
         self.train_loader = DataLoader(self.train_set, batch_size = bs_train)

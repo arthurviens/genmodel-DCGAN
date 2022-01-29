@@ -9,15 +9,59 @@ from torch.utils.data import Dataset, DataLoader
 from skimage import io, transform
 from torchvision import transforms, utils
 import os
+from tqdm import tqdm
 
 
+class MNIST_Encoder(nn.Module):
+    def __init__(self, input_size, encoding_dim):
+        super().__init__()
+        self.layers = nn.ModuleList(
+            [nn.Linear(input_size, encoding_dim),
+             nn.ReLU()]
+        )
+
+    def forward(self,x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+    
+class MNIST_Decoder(nn.Module):
+    def __init__(self, encoding_dim, input_size):
+        super().__init__()
+        self.layers = nn.ModuleList(
+                [nn.Linear(encoding_dim, input_size)]
+        )
+        
+    def forward(self,z):
+        for layer in self.layers:
+            z = layer(z)
+        return z
+
+class MNIST_Autoencoder(nn.Module):
+    def __init__(self, input_size = 784, encoding_dim = 32):
+        super().__init__()
+        self.encoder = MNIST_Encoder(input_size, encoding_dim)
+        self.decoder = MNIST_Decoder(encoding_dim, input_size)
+    
+    def forward(self, x):
+        x = x.view(x.size(0), -1) # flatten to (nm, 1) vector
+        x = self.encoder(x) # here we get the latent z
+        x = self.decoder(x) # here we get the reconsturcted input
+        x = torch.sigmoid(x)
+        x = x.reshape(x.size(0), 1, 28, 28) # reshape this flatten vector to the original image size    
+        return x
+    
+
+    
+
+    
 class Encoder(nn.Module):
     def __init__(self, input_size, encoding_dim):
         super().__init__()
         self.layers = nn.ModuleList(
-            [nn.Linear(input_size, 2048),
+            [nn.Linear(input_size, 4096),
             nn.ReLU(),
-            nn.Linear(2048, encoding_dim),
+            nn.Linear(4096, encoding_dim),
             nn.ReLU()])
 
     def forward(self,x):
@@ -28,18 +72,19 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, encoding_dim, input_size):
         super().__init__()
+        
         self.layers = nn.ModuleList(
-            [nn.Linear(encoding_dim, 2048),
+            [nn.Linear(encoding_dim, 4096),
             nn.ReLU(), 
-            nn.Linear(2048, input_size)])
+            nn.Linear(4096, input_size)])
     
     def forward(self,z):
         for layer in self.layers:
             z = layer(z)
         return z
-
+    
 class Autoencoder(nn.Module):
-    def __init__(self, input_size = 784, encoding_dim = 32):
+    def __init__(self, input_size = 224*224, encoding_dim = 1024):
         super().__init__()
         self.encoder = Encoder(input_size, encoding_dim)
         self.decoder = Decoder(encoding_dim, input_size)
@@ -49,10 +94,12 @@ class Autoencoder(nn.Module):
         x = self.encoder(x) # here we get the latent z
         x = self.decoder(x) # here we get the reconsturcted input
         x = torch.sigmoid(x)
-        x = x.reshape(x.size(0), 1, 224,224) # reshape this flatten vector to the original image size    
+        x = x.reshape(x.size(0), 1, 224, 224) # reshape this flatten vector to the original image size    
         return x
     
-
+    
+    
+    
 def train(model, trainloader = None, valloader = None, num_epochs = 1):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     
@@ -78,7 +125,7 @@ def train(model, trainloader = None, valloader = None, num_epochs = 1):
                 model.eval()
                 
             running_loss, running_correct, count = 0.0, 0, 0
-            for batch_idx, x in enumerate(dataloaders[phase]):
+            for batch_idx, x in tqdm(enumerate(dataloaders[phase])):
             #for batch_idx, (x, y) in enumerate(dataloaders[phase]):
                 #print(f"Batch {batch_idx}")
                 #x,y = x.to(device), y.to(device)
