@@ -94,11 +94,7 @@ class Grayscale(object):
         
         return image
 
-"""scale = Rescale(256)
-crop = RandomCrop(128)
-composed = transforms.Compose([Rescale(256),
-                               RandomCrop(224)])"""
-
+    
 
 def define_mnist_loaders(bs_train, bs_test):
     train_loader = DataLoader(
@@ -155,7 +151,7 @@ class CustomDataset(Dataset):
 
 
 class Data_Loaders():
-    def __init__(self, root_dir, bs_train, bs_test):
+    def __init__(self, root_dir, bs_train, bs_test, rescale, crop):
         self.root_dir = root_dir
         ls = os.listdir(root_dir)
         if not (("train" in ls) & ("test" in ls)):
@@ -163,29 +159,29 @@ class Data_Loaders():
 
         self.train_set = CustomDataset(os.path.join(self.root_dir, "train"), 
                         transform = transforms.Compose([
-                                               Rescale(256),
-                                               RandomCrop(224),
+                                               Rescale(rescale),
+                                               RandomCrop(crop),
                                                Grayscale(),
                                                ToTensor(),
-                                               transforms.Normalize((0,), (1,)),
+                                               transforms.Normalize((0.1307,), (0.3081,)),
                                            ]))
         self.test_set = CustomDataset(os.path.join(self.root_dir, "test"), 
                         transform = transforms.Compose([
-                                               Rescale(256),
-                                               RandomCrop(224),
+                                               Rescale(rescale),
+                                               RandomCrop(crop),
                                                Grayscale(),
                                                ToTensor(),
-                                               transforms.Normalize((0,), (1,))
+                                               transforms.Normalize((0.1307,), (0.3081,))
                                            ]))
 
-        self.train_loader = DataLoader(self.train_set, batch_size = bs_train)
+        self.train_loader = DataLoader(self.train_set, batch_size = bs_train, num_workers=4, prefetch_factor=8)
         self.test_loader = DataLoader(self.test_set, batch_size = bs_test)
 
 
 
 
-def define_landscapes_loaders(bs_train, bs_test):
-    dataset = Data_Loaders("data/landscapes", bs_train, bs_test)
+def define_landscapes_loaders(bs_train, bs_test, rescale=32, crop=28):
+    dataset = Data_Loaders("data/landscapes", bs_train, bs_test, rescale, crop)
 
     return dataset.train_loader, dataset.test_loader
     
