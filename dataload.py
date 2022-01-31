@@ -162,19 +162,18 @@ class Data_Loaders():
                                                Rescale(rescale),
                                                RandomCrop(crop),
                                                Grayscale(),
-                                               ToTensor(),
-                                               transforms.Normalize((0.1307,), (0.3081,)),
+                                               ToTensor()
                                            ]))
         self.test_set = CustomDataset(os.path.join(self.root_dir, "test"), 
                         transform = transforms.Compose([
                                                Rescale(rescale),
                                                RandomCrop(crop),
                                                Grayscale(),
-                                               ToTensor(),
-                                               transforms.Normalize((0.1307,), (0.3081,))
+                                               ToTensor()
                                            ]))
 
-        self.train_loader = DataLoader(self.train_set, batch_size = bs_train, num_workers=4, prefetch_factor=8)
+        self.train_loader = DataLoader(self.train_set, batch_size = bs_train, 
+                                       shuffle=True, num_workers=4, prefetch_factor=8)
         self.test_loader = DataLoader(self.test_set, batch_size = bs_test)
 
 
