@@ -151,26 +151,29 @@ class CustomDataset(Dataset):
 
 
 class Data_Loaders():
-    def __init__(self, root_dir, bs_train, bs_test, rescale, crop):
+    def __init__(self, root_dir, bs_train, bs_test, rgb, rescale, crop):
         self.root_dir = root_dir
         ls = os.listdir(root_dir)
         if not (("train" in ls) & ("test" in ls)):
             raise ValueError(f"No train and test directories at root_dir {root_dir}")
 
-        self.train_set = CustomDataset(os.path.join(self.root_dir, "train"), 
-                        transform = transforms.Compose([
+        if rgb:
+            transformations = transforms.Compose([
+                                               Rescale(rescale),
+                                               RandomCrop(crop),
+                                               ToTensor()
+                                           ])
+        else:
+            transformations = transforms.Compose([
                                                Rescale(rescale),
                                                RandomCrop(crop),
                                                Grayscale(),
                                                ToTensor()
-                                           ]))
-        self.test_set = CustomDataset(os.path.join(self.root_dir, "test"), 
-                        transform = transforms.Compose([
-                                               Rescale(rescale),
-                                               RandomCrop(crop),
-                                               Grayscale(),
-                                               ToTensor()
-                                           ]))
+                                           ])
+            
+        self.train_set = CustomDataset(os.path.join(self.root_dir, "train"), transform = transformations) 
+                        
+        self.test_set = CustomDataset(os.path.join(self.root_dir, "test"), transform = transformations)
 
         self.train_loader = DataLoader(self.train_set, batch_size = bs_train, 
                                        shuffle=True, num_workers=4, prefetch_factor=8)
@@ -179,8 +182,8 @@ class Data_Loaders():
 
 
 
-def define_landscapes_loaders(bs_train, bs_test, rescale=32, crop=28):
-    dataset = Data_Loaders("data/landscapes", bs_train, bs_test, rescale, crop)
+def define_landscapes_loaders(bs_train, bs_test, rgb=True, rescale=32, crop=28):
+    dataset = Data_Loaders("data/landscapes", bs_train, bs_test, rgb, rescale, crop)
 
     return dataset.train_loader, dataset.test_loader
     

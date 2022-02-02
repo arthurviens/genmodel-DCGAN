@@ -199,13 +199,13 @@ class C_Encoder_224(nn.Module):
         super().__init__()
         
         ### Convolutional section
-        self.enc_conv1 = nn.Conv2d(1, 32, (5,5), stride=2, padding=2) # 32 * 75 * 75
+        self.enc_conv1 = nn.Conv2d(3, 32, (5,5), stride=2, padding=2) # 
         self.relu1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.enc_conv2 = nn.Conv2d(32, 64, (3, 3), stride=1, padding=1) # 64 * 25 * 25
+        self.enc_conv2 = nn.Conv2d(32, 64, (3, 3), stride=1, padding=1) # 
         self.relu2 = nn.ReLU()
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.enc_conv3 = nn.Conv2d(64, 128, (3, 3), stride=1, padding=1) # 128 * 13 * 13
+        self.enc_conv3 = nn.Conv2d(64, 128, (3, 3), stride=1, padding=1) # 
         self.relu3 = nn.ReLU()
         self.pool3 = nn.MaxPool2d(2, 2)
         ### Flatten layer
@@ -252,7 +252,7 @@ class C_Decoder_224(nn.Module):
         self.relu1 = nn.ReLU()
         self.dec_convt2 = nn.ConvTranspose2d(64, 32, 2, stride=2)
         self.relu2 = nn.ReLU()
-        self.dec_convt3 = nn.ConvTranspose2d(32, 1, 2, stride=2)
+        self.dec_convt3 = nn.ConvTranspose2d(32, 3, 2, stride=2)
         
 
     def forward(self, x):
@@ -281,13 +281,13 @@ class C_Autoencoder_224(nn.Module):
         self.encoder = C_Encoder_224(input_size, encoding_dim)
         self.decoder = C_Decoder_224(encoding_dim, input_size)
         #Encoder
-        self.conv1 = nn.Conv2d(1, 16, 3, padding=1)  
+        self.conv1 = nn.Conv2d(3, 16, 3, padding=1)  
         self.conv2 = nn.Conv2d(16, 4, 3, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
        
         #Decoder
         self.t_conv1 = nn.ConvTranspose2d(4, 16, 2, stride=2)
-        self.t_conv2 = nn.ConvTranspose2d(16, 1, 2, stride=2)
+        self.t_conv2 = nn.ConvTranspose2d(16, 3, 2, stride=2)
     
     def forward(self, x):
         x = self.encoder(x) # here we get the latent z
@@ -305,7 +305,7 @@ class C_Autoencoder_224(nn.Module):
         print(f"Decoder t conv 1 {x.shape}")
         x = F.sigmoid(self.t_conv2(x))
         print(f"Decoder t conv 1 {x.shape}")"""
-        x = x.reshape(x.size(0), 1, 224, 224) # reshape this flatten vector to the original image size    
+        x = x.reshape(x.size(0), 3, 224, 224) # reshape this flatten vector to the original image size    
         return x
 
 
@@ -361,8 +361,8 @@ def train(model, optimizer, trainloader = None, valloader = None, num_epochs = 1
                     elif (show_example):
                         show_example=False
                         fig,axes = plt.subplots(1,2); plt.set_cmap(['gray','viridis'][0]);
-                        axes[0].imshow(x[0][0].cpu().numpy());
-                        axes[1].imshow(outputs[0][0].detach().cpu().numpy())
+                        axes[0].imshow(x[0].cpu().numpy().transpose((1, 2, 0)));
+                        axes[1].imshow(outputs[0].detach().cpu().numpy().transpose((1, 2, 0)))
                         plt.show()
                         
                 
