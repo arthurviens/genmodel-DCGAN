@@ -199,17 +199,20 @@ class C_Encoder_224(nn.Module):
         super().__init__()
         
         ### Convolutional section
-        self.enc_conv1 = nn.Conv2d(1, 32, (7,7), stride=3, padding=3) # 32 * 75 * 75
+        self.enc_conv1 = nn.Conv2d(1, 32, (5,5), stride=2, padding=2) # 32 * 75 * 75
         self.relu1 = nn.ReLU()
-        self.enc_conv2 = nn.Conv2d(32, 64, (5, 5), stride=3, padding=2) # 64 * 25 * 25
+        self.pool1 = nn.MaxPool2d(2, 2)
+        self.enc_conv2 = nn.Conv2d(32, 64, (3, 3), stride=1, padding=1) # 64 * 25 * 25
         self.relu2 = nn.ReLU()
-        self.enc_conv3 = nn.Conv2d(64, 128, (3, 3), stride=2, padding=1) # 128 * 13 * 13
+        self.pool2 = nn.MaxPool2d(2, 2)
+        self.enc_conv3 = nn.Conv2d(64, 128, (3, 3), stride=1, padding=1) # 128 * 13 * 13
         self.relu3 = nn.ReLU()
+        self.pool3 = nn.MaxPool2d(2, 2)
         ### Flatten layer
         self.flatten = nn.Flatten(start_dim=1)
         ### Linear section
         self.encoder_lin = nn.Sequential(
-            nn.Linear(128 * 13 * 13, encoded_space_dim),
+            nn.Linear(128 * 14 * 14, encoded_space_dim),
             nn.ReLU(True)
         )
         
@@ -217,12 +220,18 @@ class C_Encoder_224(nn.Module):
         x = self.enc_conv1(x)
         #print(f"After conv1 {x.shape}")
         x = self.relu1(x)
+        x = self.pool1(x)
+        #print(f"After Pool1 {x.shape}")
         x = self.enc_conv2(x)
         #print(f"After conv2 {x.shape}")
         x = self.relu2(x)
+        x = self.pool2(x)
+        #print(f"After Pool2 {x.shape}")
         x = self.enc_conv3(x)
         #print(f"After conv3 {x.shape}")
         x = self.relu3(x)
+        x = self.pool3(x)
+        #print(f"After Pool3 {x.shape}")
         x = self.flatten(x)
         #print(f"After flatten {x.shape}")
         x = self.encoder_lin(x)
@@ -234,16 +243,16 @@ class C_Decoder_224(nn.Module):
     def __init__(self, encoded_space_dim, fc2_input_dim):
         super().__init__()
         self.decoder_lin = nn.Sequential(
-            nn.Linear(encoded_space_dim, 128 * 13 * 13),
+            nn.Linear(encoded_space_dim, 128 * 14 * 14),
             nn.ReLU(True)
         )
 
-        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(128, 13, 13))
-        self.dec_convt1 = nn.ConvTranspose2d(128, 64, 3, stride=2, padding=1)
+        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(128, 14, 14))
+        self.dec_convt1 = nn.ConvTranspose2d(128, 64, 2, stride=4, output_padding=2)
         self.relu1 = nn.ReLU()
-        self.dec_convt2 = nn.ConvTranspose2d(64, 32, 5, stride=3, padding=1)
+        self.dec_convt2 = nn.ConvTranspose2d(64, 32, 2, stride=2)
         self.relu2 = nn.ReLU()
-        self.dec_convt3 = nn.ConvTranspose2d(32, 1, 7, stride=3, padding=3, output_padding=1)
+        self.dec_convt3 = nn.ConvTranspose2d(32, 1, 2, stride=2)
         
 
     def forward(self, x):
@@ -271,10 +280,31 @@ class C_Autoencoder_224(nn.Module):
         self.input_size = input_size
         self.encoder = C_Encoder_224(input_size, encoding_dim)
         self.decoder = C_Decoder_224(encoding_dim, input_size)
+        #Encoder
+        self.conv1 = nn.Conv2d(1, 16, 3, padding=1)  
+        self.conv2 = nn.Conv2d(16, 4, 3, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+       
+        #Decoder
+        self.t_conv1 = nn.ConvTranspose2d(4, 16, 2, stride=2)
+        self.t_conv2 = nn.ConvTranspose2d(16, 1, 2, stride=2)
     
     def forward(self, x):
         x = self.encoder(x) # here we get the latent z
         x = self.decoder(x) # here we get the reconsturcted input
+        """print(f"Encoder ")
+        x = F.relu(self.conv1(x))
+        print(f"Encoder conv 1 {x.shape}")
+        x = self.pool(x)
+        print(f"Encoder pool 1 {x.shape}")
+        x = F.relu(self.conv2(x))
+        print(f"Encoder conv 2 {x.shape}")
+        x = self.pool(x)
+        print(f"Encoder pool 2 {x.shape}")
+        x = F.relu(self.t_conv1(x))
+        print(f"Decoder t conv 1 {x.shape}")
+        x = F.sigmoid(self.t_conv2(x))
+        print(f"Decoder t conv 1 {x.shape}")"""
         x = x.reshape(x.size(0), 1, 224, 224) # reshape this flatten vector to the original image size    
         return x
 
@@ -295,8 +325,11 @@ def train(model, optimizer, trainloader = None, valloader = None, num_epochs = 1
     #criterion = F.binary_cross_entropy(autoencoder(x), target)
     criterion = torch.nn.BCELoss()
     
+    train_losses=[]
+    val_losses=[]
     for epoch in range(num_epochs):
         print(f'Epoch {epoch+1}/{num_epochs}\n{"-"*10}')
+        show_example = True
         
         for phase in phases:
             if phase == 'train':
@@ -325,6 +358,13 @@ def train(model, optimizer, trainloader = None, valloader = None, num_epochs = 1
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
+                    elif (show_example):
+                        show_example=False
+                        fig,axes = plt.subplots(1,2); plt.set_cmap(['gray','viridis'][0]);
+                        axes[0].imshow(x[0][0].cpu().numpy());
+                        axes[1].imshow(outputs[0][0].detach().cpu().numpy())
+                        plt.show()
+                        
                 
                 # stats
                 running_loss += loss.item() * x.size(0)
@@ -332,5 +372,10 @@ def train(model, optimizer, trainloader = None, valloader = None, num_epochs = 1
             
             epoch_loss = running_loss / count
             print(f'{phase} loss {epoch_loss:.6f}')
+            if phase == 'train':
+                train_losses.append(epoch_loss)
+            else:
+                val_losses.append(epoch_loss)
         print()
-            
+    
+    return train_losses, val_losses

@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import torch
 import torchvision
 import matplotlib.pyplot as plt
@@ -11,26 +12,28 @@ from dataload import *
 from autoencoder import *
 
 
+def try_model(model, bs_tr, bs_te, resc, crop, lr, n_epochs, opt, wd,
+             file_sav):
+    train_loader, test_loader = define_landscapes_loaders(bs_tr, bs_te, 
+                                                          rescale=resc, crop=crop)
+    
+    opti = opt(model.parameters(), weight_decay=wd)
+    
+    print(f"Began training : epochs = {n_epochs}, lr = {lr}")
+    t_losses, v_losses = train(model, opti, trainloader=train_loader, valloader=test_loader, num_epochs=n_epochs)
+    
+    torch.save(model.state_dict(), f"saved_models/{file_sav}.sav")
+    pd.DataFrame(data=np.array([t_losses, v_losses]).T, columns = ["train", "val"]).to_csv(f"saved_models/{file_sav}.csv", index=False)
+
 if __name__ == "__main__":
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f"Launching on {device}")
-    batch_size_train = 64
-    batch_size_test = 64
-
-    #train_loader, test_loader = define_mnist_loaders(batch_size_train, batch_size_test)
-    train_loader, test_loader = define_landscapes_loaders(batch_size_train, batch_size_test, 
-                                                          rescale=32, crop=28)
-
-    encoding_dim = 128
-    lr = 0.1
-    momentum = 0.5
-    log_interval = 10
-    n_epochs = 5
     
-    autoencoder = C_Autoencoder(28*28, encoding_dim)
-    opt = torch.optim.Adam(autoencoder.parameters(), lr=lr)
     
-    print(f"Began training : epochs = {n_epochs}, lr = {lr}")
-    train(autoencoder, opt, trainloader=train_loader, valloader=test_loader, num_epochs=n_epochs)
+    #autoencoder_1 = C_Autoencoder_224(224*224, 2048)
+    #try_model(autoencoder_1, 4, 4, 256, 224, 0.0001, 75, torch.optim.Adam,
+    #          1e-5, "model_c-autoenc224_adam_n150")
+    autoencoder_2 = C_Autoencoder_224(224*224, 2048)
+    try_model(autoencoder_2, 4, 4, 256, 224, 0.0001, 40, torch.optim.Adadelta,
+              1e-5, "model_c-autoenc224_adadelta_n150")
     
-    torch.save(autoencoder.state_dict(), "saved_models/model_c-autoenc28.sav")
