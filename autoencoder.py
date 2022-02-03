@@ -12,6 +12,22 @@ import os
 from tqdm import tqdm
 
 
+def init_weights(m):
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform_(m.weight, gain=nn.init.calculate_gain('relu'))
+        m.bias.data.fill_(0.01)
+
+
+def get_n_params(model):
+    pp=0
+    for p in list(model.parameters()):
+        nn=1
+        for s in list(p.size()):
+            nn = nn*s
+        pp += nn
+    return pp
+
+
 class MNIST_Encoder(nn.Module):
     def __init__(self, input_size, encoding_dim):
         super().__init__()
@@ -193,56 +209,66 @@ class C_Autoencoder_28(nn.Module):
         return x
 
 
-
+debug=False
 class C_Encoder_224(nn.Module):
     def __init__(self, fc2_input_dim, encoded_space_dim):
         super().__init__()
         
         ### Convolutional section
-        self.enc_conv1 = nn.Conv2d(3, 32, (7,7), stride=1, padding=3) # 
+        self.enc_conv1 = nn.Conv2d(3, 32, (7,7), stride=2, padding=3) # 32 * 112 * 112
         self.relu1 = nn.ReLU()
-        self.pool1 = nn.MaxPool2d(2, 2)
-        self.enc_conv2 = nn.Conv2d(32, 64, (5, 5), stride=1, padding=2) # 
+        self.enc_conv2 = nn.Conv2d(32, 32, (7,7), stride=1, padding=3) # 32 * 112 * 112
         self.relu2 = nn.ReLU()
-        self.pool2 = nn.MaxPool2d(2, 2)
-        self.enc_conv3 = nn.Conv2d(64, 128, (3, 3), stride=1, padding=1) # 
+        self.enc_conv3 = nn.Conv2d(32, 64, (5, 5), stride=2, padding=2) # 64 * 56 * 56
         self.relu3 = nn.ReLU()
-        self.pool3 = nn.MaxPool2d(2, 2)
-        self.enc_conv4 = nn.Conv2d(128, 128, (3, 3), stride=1, padding=1) # 
+        self.enc_conv4 = nn.Conv2d(64, 64, (5, 5), stride=1, padding=2) # 64 * 56 * 56
         self.relu4 = nn.ReLU()
-        self.pool4 = nn.MaxPool2d(2, 2)
+        self.enc_conv5 = nn.Conv2d(64, 128, (3, 3), stride=2, padding=1) # 128 * 28 * 28
+        self.relu5 = nn.ReLU()
+        self.enc_conv6 = nn.Conv2d(128, 128, (3, 3), stride=2, padding=1) # 128 * 14 * 14
+        self.relu6 = nn.ReLU()
+        self.enc_conv7 = nn.Conv2d(128, 256, (3, 3), stride=2, padding=1) # 256 * 7 * 7
+        self.relu7 = nn.ReLU()
+        self.enc_conv8 = nn.Conv2d(256, 512, (3, 3), stride=2, padding=1) # 512 * 4 * 4
+        self.relu8 = nn.ReLU()
         ### Flatten layer
         self.flatten = nn.Flatten(start_dim=1)
         ### Linear section
         self.encoder_lin = nn.Sequential(
-            nn.Linear(128 * 14 * 14, encoded_space_dim),
+            nn.Linear(512 * 4 * 4, encoded_space_dim),
             nn.ReLU(True)
         )
         
     def forward(self, x):
         x = self.enc_conv1(x)
-        #print(f"After conv1 {x.shape}")
         x = self.relu1(x)
-        x = self.pool1(x)
-        #print(f"After Pool1 {x.shape}")
+        if debug: print(f"After conv1 {x.shape}")
         x = self.enc_conv2(x)
-        #print(f"After conv2 {x.shape}")
         x = self.relu2(x)
-        x = self.pool2(x)
-        #print(f"After Pool2 {x.shape}")
+        if debug: print(f"After conv2 {x.shape}")
         x = self.enc_conv3(x)
-        #print(f"After conv3 {x.shape}")
         x = self.relu3(x)
-        x = self.pool3(x)
+        if debug: print(f"After conv3 {x.shape}")
         x = self.enc_conv4(x)
-        #print(f"After conv4 {x.shape}")
         x = self.relu4(x)
-        x = self.pool4(x)
-        #print(f"After Pool4 {x.shape}")
+        if debug: print(f"After conv4 {x.shape}")
+        x = self.enc_conv5(x)
+        x = self.relu5(x)
+        if debug: print(f"After conv5 {x.shape}")
+        x = self.enc_conv6(x)
+        x = self.relu6(x)
+        if debug: print(f"After conv6 {x.shape}")
+        x = self.enc_conv7(x)
+        x = self.relu7(x)
+        if debug: print(f"After conv7 {x.shape}")
+        x = self.enc_conv8(x)
+        x = self.relu8(x)
+        if debug: print(f"After conv8 {x.shape}")
+
         x = self.flatten(x)
-        #print(f"After flatten {x.shape}")
+        if debug: print(f"After flatten {x.shape}")
         x = self.encoder_lin(x)
-        #print(f"After encoder_linear {x.shape}")
+        if debug: print(f"After encoder_linear {x.shape}")
         return x
 
 
@@ -250,38 +276,58 @@ class C_Decoder_224(nn.Module):
     def __init__(self, encoded_space_dim, fc2_input_dim):
         super().__init__()
         self.decoder_lin = nn.Sequential(
-            nn.Linear(encoded_space_dim, 128 * 14 * 14),
+            nn.Linear(encoded_space_dim, 512 * 4 * 4),
             nn.ReLU(True)
         )
 
-        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(128, 14, 14))
-        self.dec_convt1 = nn.ConvTranspose2d(128, 128, 2, stride=2)
+        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(512, 4, 4))
+        self.dec_convt1 = nn.ConvTranspose2d(512, 256, 2, stride=2, padding=1, output_padding=1)
         self.relu1 = nn.ReLU()
-        self.dec_convt2 = nn.ConvTranspose2d(128, 64, 2, stride=2)
+        self.dec_convt2 = nn.ConvTranspose2d(256, 128, 2, stride=2)
         self.relu2 = nn.ReLU()
-        self.dec_convt3 = nn.ConvTranspose2d(64, 32, 2, stride=2)
+        self.dec_convt3 = nn.ConvTranspose2d(128, 128, 2, stride=2)
         self.relu3 = nn.ReLU()
-        self.dec_convt4 = nn.ConvTranspose2d(32, 3, 2, stride=2)
+        self.dec_convt4 = nn.ConvTranspose2d(128, 64, 2, stride=2)
+        self.relu4 = nn.ReLU()
+        self.dec_convt5 = nn.ConvTranspose2d(64, 64, 2, stride=1)
+        self.relu5 = nn.ReLU()
+        self.dec_convt6 = nn.ConvTranspose2d(64, 32, 2, stride=2, padding=1)
+        self.relu6 = nn.ReLU()
+        self.dec_convt7 = nn.ConvTranspose2d(32, 32, 2, stride=1)
+        self.relu7 = nn.ReLU()
+        self.dec_convt8 = nn.ConvTranspose2d(32, 3, 2, stride=2, padding=1)
         
 
     def forward(self, x):
-        #print("DECODER")
-        #print(f"Start {x.shape}")
+        if debug: print("DECODER")
+        if debug: print(f"Start {x.shape}")
         x = self.decoder_lin(x)
-        #print(f"After decoder_lin {x.shape}")
+        if debug: print(f"After decoder_lin {x.shape}")
         x = self.unflatten(x)
-        #print(f"After unflatten {x.shape}")
+        if debug: print(f"After unflatten {x.shape}")
         x = self.dec_convt1(x)
         x = self.relu1(x)
-        #print(f"After transposed conv 1 {x.shape}")
+        if debug: print(f"After transposed conv 1 {x.shape}")
         x = self.dec_convt2(x)
         x = self.relu2(x)
-        #print(f"After transposed conv 2 {x.shape}")
+        if debug: print(f"After transposed conv 2 {x.shape}")
         x = self.dec_convt3(x)
         x = self.relu3(x)
-        #print(f"After transposed conv 3 {x.shape}")
+        if debug: print(f"After transposed conv 3 {x.shape}")
         x = self.dec_convt4(x)
-        #print(f"After transposed conv 4 {x.shape}")
+        x = self.relu4(x)
+        if debug: print(f"After transposed conv 4 {x.shape}")
+        x = self.dec_convt5(x)
+        x = self.relu5(x)
+        if debug: print(f"After transposed conv 5 {x.shape}")
+        x = self.dec_convt6(x)
+        x = self.relu6(x)
+        if debug: print(f"After transposed conv 6 {x.shape}")
+        x = self.dec_convt7(x)
+        x = self.relu7(x)
+        if debug: print(f"After transposed conv 7 {x.shape}")
+        x = self.dec_convt8(x)
+        if debug: print(f"After transposed conv 8 {x.shape}")
         x = torch.sigmoid(x)
         return x
 
@@ -293,13 +339,13 @@ class C_Autoencoder_224(nn.Module):
         self.encoder = C_Encoder_224(input_size, encoding_dim)
         self.decoder = C_Decoder_224(encoding_dim, input_size)
         #Encoder
-        self.conv1 = nn.Conv2d(3, 16, 3, padding=1)  
-        self.conv2 = nn.Conv2d(16, 4, 3, padding=1)
-        self.pool = nn.MaxPool2d(2, 2)
+        #self.conv1 = nn.Conv2d(3, 16, 3, padding=1)  
+        #self.conv2 = nn.Conv2d(16, 4, 3, padding=1)
+        #self.pool = nn.MaxPool2d(2, 2)
        
         #Decoder
-        self.t_conv1 = nn.ConvTranspose2d(4, 16, 2, stride=2)
-        self.t_conv2 = nn.ConvTranspose2d(16, 3, 2, stride=2)
+        #self.t_conv1 = nn.ConvTranspose2d(4, 16, 2, stride=2)
+        #self.t_conv2 = nn.ConvTranspose2d(16, 3, 2, stride=2)
     
 
     def forward(self, x):

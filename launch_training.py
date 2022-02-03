@@ -17,8 +17,8 @@ def try_model(model, bs_tr, bs_te, resc, crop, lr, n_epochs, opt, wd,
     train_loader, test_loader = define_landscapes_loaders(bs_tr, bs_te, rgb=True,
                                                           rescale=resc, crop=crop)
     
-    opti = opt(model.parameters(), weight_decay=wd)
-    
+    opti = opt(model.parameters(), lr = lr, weight_decay=wd) # 
+    model.apply(init_weights)
     print(f"Began training : epochs = {n_epochs}, lr = {lr}")
     t_losses, v_losses = train(model, opti, trainloader=train_loader, valloader=test_loader, num_epochs=n_epochs)
     
@@ -31,8 +31,8 @@ if __name__ == "__main__":
     
     
     autoencoder_1 = C_Autoencoder_224(224*224, 2048)
-    try_model(autoencoder_1, 4, 4, 256, 224, 0.0001, 100, torch.optim.Adam,
-              1e-5, "model_c-autoenc224_adam_n100")
+    try_model(autoencoder_1, 4, 4, 256, 224, 0.00005, 50, torch.optim.Adam,
+              1e-6, "model_c-autoenc224_adam_n50")
     #autoencoder_2 = C_Autoencoder_224(224*224, 2048)
     #try_model(autoencoder_2, 4, 4, 256, 224, 0.0001, 40, torch.optim.Adadelta,
     #          1e-5, "model_c-autoenc224_adadelta_n150")

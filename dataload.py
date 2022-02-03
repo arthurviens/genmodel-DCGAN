@@ -83,7 +83,7 @@ class ToTensor(object):
             image = image.transpose((2, 0, 1))
         else:
             image = np.expand_dims(image, 0)
-         
+            
         return from_numpy(image).float()
 
 
