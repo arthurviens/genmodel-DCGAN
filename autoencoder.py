@@ -199,15 +199,18 @@ class C_Encoder_224(nn.Module):
         super().__init__()
         
         ### Convolutional section
-        self.enc_conv1 = nn.Conv2d(3, 32, (5,5), stride=2, padding=2) # 
+        self.enc_conv1 = nn.Conv2d(3, 32, (7,7), stride=1, padding=3) # 
         self.relu1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.enc_conv2 = nn.Conv2d(32, 64, (3, 3), stride=1, padding=1) # 
+        self.enc_conv2 = nn.Conv2d(32, 64, (5, 5), stride=1, padding=2) # 
         self.relu2 = nn.ReLU()
         self.pool2 = nn.MaxPool2d(2, 2)
         self.enc_conv3 = nn.Conv2d(64, 128, (3, 3), stride=1, padding=1) # 
         self.relu3 = nn.ReLU()
         self.pool3 = nn.MaxPool2d(2, 2)
+        self.enc_conv4 = nn.Conv2d(128, 128, (3, 3), stride=1, padding=1) # 
+        self.relu4 = nn.ReLU()
+        self.pool4 = nn.MaxPool2d(2, 2)
         ### Flatten layer
         self.flatten = nn.Flatten(start_dim=1)
         ### Linear section
@@ -231,7 +234,11 @@ class C_Encoder_224(nn.Module):
         #print(f"After conv3 {x.shape}")
         x = self.relu3(x)
         x = self.pool3(x)
-        #print(f"After Pool3 {x.shape}")
+        x = self.enc_conv4(x)
+        #print(f"After conv4 {x.shape}")
+        x = self.relu4(x)
+        x = self.pool4(x)
+        #print(f"After Pool4 {x.shape}")
         x = self.flatten(x)
         #print(f"After flatten {x.shape}")
         x = self.encoder_lin(x)
@@ -248,11 +255,13 @@ class C_Decoder_224(nn.Module):
         )
 
         self.unflatten = nn.Unflatten(dim=1, unflattened_size=(128, 14, 14))
-        self.dec_convt1 = nn.ConvTranspose2d(128, 64, 2, stride=4, output_padding=2)
+        self.dec_convt1 = nn.ConvTranspose2d(128, 128, 2, stride=2)
         self.relu1 = nn.ReLU()
-        self.dec_convt2 = nn.ConvTranspose2d(64, 32, 2, stride=2)
+        self.dec_convt2 = nn.ConvTranspose2d(128, 64, 2, stride=2)
         self.relu2 = nn.ReLU()
-        self.dec_convt3 = nn.ConvTranspose2d(32, 3, 2, stride=2)
+        self.dec_convt3 = nn.ConvTranspose2d(64, 32, 2, stride=2)
+        self.relu3 = nn.ReLU()
+        self.dec_convt4 = nn.ConvTranspose2d(32, 3, 2, stride=2)
         
 
     def forward(self, x):
@@ -269,7 +278,10 @@ class C_Decoder_224(nn.Module):
         x = self.relu2(x)
         #print(f"After transposed conv 2 {x.shape}")
         x = self.dec_convt3(x)
+        x = self.relu3(x)
         #print(f"After transposed conv 3 {x.shape}")
+        x = self.dec_convt4(x)
+        #print(f"After transposed conv 4 {x.shape}")
         x = torch.sigmoid(x)
         return x
 
@@ -289,6 +301,7 @@ class C_Autoencoder_224(nn.Module):
         self.t_conv1 = nn.ConvTranspose2d(4, 16, 2, stride=2)
         self.t_conv2 = nn.ConvTranspose2d(16, 3, 2, stride=2)
     
+
     def forward(self, x):
         x = self.encoder(x) # here we get the latent z
         x = self.decoder(x) # here we get the reconsturcted input
