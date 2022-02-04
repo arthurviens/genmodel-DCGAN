@@ -18,11 +18,11 @@ batch_size_test = 4
 train_loader, test_loader = define_landscapes_loaders(bs, batch_size_test, 
                                                       rescale=256,
                                                       crop=224,
-                                                      rgb=True)
+                                                      rgb=False)
 
-encoding_dim = 2048
+# encoding_dim = 2048
 lr = 0.0002
-n_epoch = 1
+n_epoch = 10
 
 # build network
 z_dim = 100
@@ -42,8 +42,6 @@ G_optimizer = optim.Adam(G.parameters(), lr = lr)
 D_optimizer = optim.Adam(D.parameters(), lr = lr)
 
 
-
-
 def D_train(x):
     #=======================Train the discriminator=======================#
     D.zero_grad()
@@ -57,8 +55,8 @@ def D_train(x):
     D_real_score = D_output
 
     # train discriminator on facke
-    z = Variable(torch.randn(bs*3, z_dim).to(device))
-    x_fake, y_fake = G(z), Variable(torch.zeros(bs*3, landscape_dim).to(device))
+    z = Variable(torch.randn(bs, z_dim).to(device))
+    x_fake, y_fake = G(z), Variable(torch.zeros(bs, 1).to(device))
 
     D_output = D(x_fake)
     D_fake_loss = criterion(D_output, y_fake)
@@ -71,13 +69,12 @@ def D_train(x):
         
     return  D_loss.data.item()
 
-
 def G_train(x):
     #=======================Train the generator=======================#
     G.zero_grad()
 
-    z = Variable(torch.randn(bs*3, z_dim).to(device))
-    y = Variable(torch.ones(bs*3, landscape_dim).to(device))
+    z = Variable(torch.randn(bs, z_dim).to(device))
+    y = Variable(torch.ones(bs, 1).to(device))
 
     G_output = G(z)
     D_output = D(G_output)
@@ -93,6 +90,7 @@ def G_train(x):
 for epoch in range(1, n_epoch+1):           
     D_losses, G_losses = [], []
     for batch_idx, (x) in enumerate(train_loader):
+        if(x.size()[0] < bs) : continue
         D_losses.append(D_train(x))
         G_losses.append(G_train(x))
 
@@ -105,4 +103,4 @@ with torch.no_grad():
     test_z = Variable(torch.randn(bs, z_dim).to(device))
     generated = G(test_z)
 
-    save_image(generated.view(generated.size(0), 1, 28, 28), './test' + '.png')
+    save_image(generated.view(generated.size(0), 1, 224, 224), './test' + '.png')

@@ -35,4 +35,3 @@ class Discriminator(nn.Module):
         x = F.dropout(x, 0.3)
         return torch.sigmoid(self.fc4(x))
 
-
