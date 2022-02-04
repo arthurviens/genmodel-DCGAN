@@ -218,14 +218,17 @@ class C_Encoder_224(nn.Module):
         self.enc_conv1 = nn.Conv2d(3, 32, (7,7), stride=2, padding=3) # 32 * 112 * 112
         self.relu1 = nn.ReLU()
         self.enc_conv2 = nn.Conv2d(32, 32, (7,7), stride=1, padding=3) # 32 * 112 * 112
+        self.batchnorm2 = nn.BatchNorm2d(32)
         self.relu2 = nn.ReLU()
         self.enc_conv3 = nn.Conv2d(32, 64, (5, 5), stride=2, padding=2) # 64 * 56 * 56
         self.relu3 = nn.ReLU()
         self.enc_conv4 = nn.Conv2d(64, 64, (5, 5), stride=1, padding=2) # 64 * 56 * 56
+        self.batchnorm4 = nn.BatchNorm2d(64)
         self.relu4 = nn.ReLU()
         self.enc_conv5 = nn.Conv2d(64, 128, (3, 3), stride=2, padding=1) # 128 * 28 * 28
         self.relu5 = nn.ReLU()
         self.enc_conv6 = nn.Conv2d(128, 128, (3, 3), stride=2, padding=1) # 128 * 14 * 14
+        self.batchnorm6 = nn.BatchNorm2d(128)
         self.relu6 = nn.ReLU()
         self.enc_conv7 = nn.Conv2d(128, 256, (3, 3), stride=2, padding=1) # 256 * 7 * 7
         self.relu7 = nn.ReLU()
@@ -244,18 +247,21 @@ class C_Encoder_224(nn.Module):
         x = self.relu1(x)
         if debug: print(f"After conv1 {x.shape}")
         x = self.enc_conv2(x)
+        x = self.batchnorm2(x)
         x = self.relu2(x)
         if debug: print(f"After conv2 {x.shape}")
         x = self.enc_conv3(x)
         x = self.relu3(x)
         if debug: print(f"After conv3 {x.shape}")
         x = self.enc_conv4(x)
+        x = self.batchnorm4(x)
         x = self.relu4(x)
         if debug: print(f"After conv4 {x.shape}")
         x = self.enc_conv5(x)
         x = self.relu5(x)
         if debug: print(f"After conv5 {x.shape}")
         x = self.enc_conv6(x)
+        x = self.batchnorm6(x)
         x = self.relu6(x)
         if debug: print(f"After conv6 {x.shape}")
         x = self.enc_conv7(x)

@@ -31,8 +31,8 @@ if __name__ == "__main__":
     
     
     autoencoder_1 = C_Autoencoder_224(224*224, 2048)
-    try_model(autoencoder_1, 4, 4, 256, 224, 0.00005, 50, torch.optim.Adam,
-              1e-6, "model_c-autoenc224_adam_n50")
+    try_model(autoencoder_1, 8, 8, 256, 224, 0.00005, 200, torch.optim.Adam,
+              1e-6, "model_c-autoenc224_adam_n150")
     #autoencoder_2 = C_Autoencoder_224(224*224, 2048)
     #try_model(autoencoder_2, 4, 4, 256, 224, 0.0001, 40, torch.optim.Adadelta,
     #          1e-5, "model_c-autoenc224_adadelta_n150")
