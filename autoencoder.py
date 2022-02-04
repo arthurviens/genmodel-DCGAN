@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import torch
 import torchvision
 import matplotlib.pyplot as plt
@@ -215,35 +216,44 @@ class C_Encoder_224(nn.Module):
         super().__init__()
         
         ### Convolutional section
-        self.enc_conv1 = nn.Conv2d(3, 32, (7,7), stride=2, padding=3) # 32 * 112 * 112
+        self.enc_conv1 = nn.Conv2d(3, 64, (7,7), stride=1, padding=3) # 64 * 224 * 224
+        self.batchnorm1 = nn.BatchNorm2d(64)
         self.relu1 = nn.ReLU()
-        self.enc_conv2 = nn.Conv2d(32, 32, (7,7), stride=1, padding=3) # 32 * 112 * 112
-        self.batchnorm2 = nn.BatchNorm2d(32)
+        self.enc_conv2 = nn.Conv2d(64, 64, (7,7), stride=2, padding=3) # 64 * 112 * 112
+        self.batchnorm2 = nn.BatchNorm2d(64)
         self.relu2 = nn.ReLU()
-        self.enc_conv3 = nn.Conv2d(32, 64, (5, 5), stride=2, padding=2) # 64 * 56 * 56
+        self.enc_conv3 = nn.Conv2d(64, 64, (5, 5), stride=2, padding=2) # 64 * 56 * 56
+        self.batchnorm3 = nn.BatchNorm2d(64)
         self.relu3 = nn.ReLU()
-        self.enc_conv4 = nn.Conv2d(64, 64, (5, 5), stride=1, padding=2) # 64 * 56 * 56
-        self.batchnorm4 = nn.BatchNorm2d(64)
+        self.enc_conv4 = nn.Conv2d(64, 128, (5, 5), stride=1, padding=2) # 128 * 56 * 56
+        self.batchnorm4 = nn.BatchNorm2d(128)
         self.relu4 = nn.ReLU()
-        self.enc_conv5 = nn.Conv2d(64, 128, (3, 3), stride=2, padding=1) # 128 * 28 * 28
+        self.enc_conv5 = nn.Conv2d(128, 128, (3, 3), stride=2, padding=1) # 128 * 28 * 28
+        self.batchnorm5 = nn.BatchNorm2d(128)
         self.relu5 = nn.ReLU()
-        self.enc_conv6 = nn.Conv2d(128, 128, (3, 3), stride=2, padding=1) # 128 * 14 * 14
-        self.batchnorm6 = nn.BatchNorm2d(128)
+        self.enc_conv6 = nn.Conv2d(128, 256, (3, 3), stride=2, padding=1) # 256 * 14 * 14
+        self.batchnorm6 = nn.BatchNorm2d(256)
         self.relu6 = nn.ReLU()
-        self.enc_conv7 = nn.Conv2d(128, 256, (3, 3), stride=2, padding=1) # 256 * 7 * 7
+        self.enc_conv7 = nn.Conv2d(256, 256, (3, 3), stride=1, padding=1) # 256 * 14 * 14
+        self.batchnorm7 = nn.BatchNorm2d(256)
         self.relu7 = nn.ReLU()
-        self.enc_conv8 = nn.Conv2d(256, 512, (3, 3), stride=2, padding=1) # 512 * 4 * 4
+        self.enc_conv8 = nn.Conv2d(256, 512, (3, 3), stride=2, padding=1) # 512 * 7 * 7
+        self.batchnorm8 = nn.BatchNorm2d(512)
         self.relu8 = nn.ReLU()
+        self.enc_conv9 = nn.Conv2d(512, 1024, (3, 3), stride=2, padding=1) # 1024 * 4 * 4
+        self.batchnorm9 = nn.BatchNorm2d(1024)
+        self.relu9 = nn.ReLU()
         ### Flatten layer
         self.flatten = nn.Flatten(start_dim=1)
         ### Linear section
         self.encoder_lin = nn.Sequential(
-            nn.Linear(512 * 4 * 4, encoded_space_dim),
+            nn.Linear(1024 * 4 * 4, encoded_space_dim),
             nn.ReLU(True)
         )
         
     def forward(self, x):
         x = self.enc_conv1(x)
+        x = self.batchnorm1(x)
         x = self.relu1(x)
         if debug: print(f"After conv1 {x.shape}")
         x = self.enc_conv2(x)
@@ -251,6 +261,7 @@ class C_Encoder_224(nn.Module):
         x = self.relu2(x)
         if debug: print(f"After conv2 {x.shape}")
         x = self.enc_conv3(x)
+        x = self.batchnorm3(x)
         x = self.relu3(x)
         if debug: print(f"After conv3 {x.shape}")
         x = self.enc_conv4(x)
@@ -258,6 +269,7 @@ class C_Encoder_224(nn.Module):
         x = self.relu4(x)
         if debug: print(f"After conv4 {x.shape}")
         x = self.enc_conv5(x)
+        x = self.batchnorm5(x)
         x = self.relu5(x)
         if debug: print(f"After conv5 {x.shape}")
         x = self.enc_conv6(x)
@@ -265,11 +277,17 @@ class C_Encoder_224(nn.Module):
         x = self.relu6(x)
         if debug: print(f"After conv6 {x.shape}")
         x = self.enc_conv7(x)
+        x = self.batchnorm7(x)
         x = self.relu7(x)
         if debug: print(f"After conv7 {x.shape}")
         x = self.enc_conv8(x)
+        x = self.batchnorm8(x)
         x = self.relu8(x)
         if debug: print(f"After conv8 {x.shape}")
+        x = self.enc_conv9(x)
+        x = self.batchnorm9(x)
+        x = self.relu9(x)
+        if debug: print(f"After conv9 {x.shape}")
 
         x = self.flatten(x)
         if debug: print(f"After flatten {x.shape}")
@@ -282,26 +300,36 @@ class C_Decoder_224(nn.Module):
     def __init__(self, encoded_space_dim, fc2_input_dim):
         super().__init__()
         self.decoder_lin = nn.Sequential(
-            nn.Linear(encoded_space_dim, 512 * 4 * 4),
+            nn.Linear(encoded_space_dim, 1024 * 4 * 4),
             nn.ReLU(True)
         )
 
-        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(512, 4, 4))
-        self.dec_convt1 = nn.ConvTranspose2d(512, 256, 2, stride=2, padding=1, output_padding=1)
+        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(1024, 4, 4))
+        self.dec_convt1 = nn.ConvTranspose2d(1024, 512, 2, stride=2, padding=1, output_padding=1)
+        self.batchnorm1 = nn.BatchNorm2d(512)
         self.relu1 = nn.ReLU()
-        self.dec_convt2 = nn.ConvTranspose2d(256, 128, 2, stride=2)
+        self.dec_convt2 = nn.ConvTranspose2d(512, 256, 2, stride=2)
+        self.batchnorm2 = nn.BatchNorm2d(256)
         self.relu2 = nn.ReLU()
-        self.dec_convt3 = nn.ConvTranspose2d(128, 128, 2, stride=2)
+        self.dec_convt3 = nn.ConvTranspose2d(256, 256, 2, stride=1)
+        self.batchnorm3 = nn.BatchNorm2d(256)
         self.relu3 = nn.ReLU()
-        self.dec_convt4 = nn.ConvTranspose2d(128, 64, 2, stride=2)
+        self.dec_convt4 = nn.ConvTranspose2d(256, 128, 2, stride=2, padding=1)
+        self.batchnorm4 = nn.BatchNorm2d(128)
         self.relu4 = nn.ReLU()
-        self.dec_convt5 = nn.ConvTranspose2d(64, 64, 2, stride=1)
+        self.dec_convt5 = nn.ConvTranspose2d(128, 128, 2, stride=2)
+        self.batchnorm5 = nn.BatchNorm2d(128)
         self.relu5 = nn.ReLU()
-        self.dec_convt6 = nn.ConvTranspose2d(64, 32, 2, stride=2, padding=1)
+        self.dec_convt6 = nn.ConvTranspose2d(128, 64, 2, stride=1)
+        self.batchnorm6 = nn.BatchNorm2d(64)
         self.relu6 = nn.ReLU()
-        self.dec_convt7 = nn.ConvTranspose2d(32, 32, 2, stride=1)
+        self.dec_convt7 = nn.ConvTranspose2d(64, 64, 2, stride=2, padding=1)
+        self.batchnorm7 = nn.BatchNorm2d(64)
         self.relu7 = nn.ReLU()
-        self.dec_convt8 = nn.ConvTranspose2d(32, 3, 2, stride=2, padding=1)
+        self.dec_convt8 = nn.ConvTranspose2d(64, 64, 2, stride=1)
+        self.batchnorm8 = nn.BatchNorm2d(64)
+        self.relu8 = nn.ReLU()
+        self.dec_convt9 = nn.ConvTranspose2d(64, 3, 2, stride=2, padding=1)
         
 
     def forward(self, x):
@@ -312,28 +340,39 @@ class C_Decoder_224(nn.Module):
         x = self.unflatten(x)
         if debug: print(f"After unflatten {x.shape}")
         x = self.dec_convt1(x)
+        x = self.batchnorm1(x)
         x = self.relu1(x)
         if debug: print(f"After transposed conv 1 {x.shape}")
         x = self.dec_convt2(x)
+        x = self.batchnorm2(x)
         x = self.relu2(x)
         if debug: print(f"After transposed conv 2 {x.shape}")
         x = self.dec_convt3(x)
+        x = self.batchnorm3(x)
         x = self.relu3(x)
         if debug: print(f"After transposed conv 3 {x.shape}")
         x = self.dec_convt4(x)
+        x = self.batchnorm4(x)
         x = self.relu4(x)
         if debug: print(f"After transposed conv 4 {x.shape}")
         x = self.dec_convt5(x)
+        x = self.batchnorm5(x)
         x = self.relu5(x)
         if debug: print(f"After transposed conv 5 {x.shape}")
         x = self.dec_convt6(x)
+        x = self.batchnorm6(x)
         x = self.relu6(x)
         if debug: print(f"After transposed conv 6 {x.shape}")
         x = self.dec_convt7(x)
+        x = self.batchnorm7(x)
         x = self.relu7(x)
         if debug: print(f"After transposed conv 7 {x.shape}")
         x = self.dec_convt8(x)
+        x = self.batchnorm8(x)
+        x = self.relu8(x)
         if debug: print(f"After transposed conv 8 {x.shape}")
+        x = self.dec_convt9(x)
+        if debug: print(f"After transposed conv 9 {x.shape}")
         x = torch.sigmoid(x)
         return x
 
@@ -375,7 +414,7 @@ class C_Autoencoder_224(nn.Module):
 
 
     
-def train(model, optimizer, trainloader = None, valloader = None, num_epochs = 1):
+def train(model, optimizer, trainloader = None, valloader = None, num_epochs = 1, savefile=None):
     
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     
@@ -442,5 +481,10 @@ def train(model, optimizer, trainloader = None, valloader = None, num_epochs = 1
             else:
                 val_losses.append(epoch_loss)
         print()
+
+        if (savefile is not None) and (epoch % 10 == 0) and (epoch > 0):
+            torch.save(model.state_dict(), f"saved_models/{savefile}.sav")
+            pd.DataFrame(data=np.array([train_losses, val_losses]).T, 
+                columns = ["train", "val"]).to_csv(f"saved_models/{savefile}.csv", index=False)
     
     return train_losses, val_losses

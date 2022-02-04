@@ -161,14 +161,16 @@ class Data_Loaders():
             transformations = transforms.Compose([
                                                Rescale(rescale),
                                                RandomCrop(crop),
-                                               ToTensor()
+                                               ToTensor(),
+                                               transforms.RandomHorizontalFlip(p=0.5)
                                            ])
         else:
             transformations = transforms.Compose([
                                                Rescale(rescale),
                                                RandomCrop(crop),
                                                Grayscale(),
-                                               ToTensor()
+                                               ToTensor(),
+                                               transforms.RandomHorizontalFlip(p=0.5)
                                            ])
             
         self.train_set = CustomDataset(os.path.join(self.root_dir, "train"), transform = transformations) 
@@ -176,9 +178,9 @@ class Data_Loaders():
         self.test_set = CustomDataset(os.path.join(self.root_dir, "test"), transform = transformations)
 
         self.train_loader = DataLoader(self.train_set, batch_size = bs_train,
-                                        shuffle=True, num_workers=4, prefetch_factor=8)
+                                        shuffle=True, num_workers=16, prefetch_factor=8)
         self.test_loader = DataLoader(self.test_set, batch_size = bs_test,
-                                        num_workers=4, prefetch_factor=8)
+                                        num_workers=16, prefetch_factor=8)
 
 
 
