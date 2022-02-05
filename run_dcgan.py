@@ -8,31 +8,32 @@ from torchvision.utils import save_image
 import matplotlib.pyplot as plt
 from dataload import *
 from models import *
+from tqdm import tqdm
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-bs = 4
-batch_size_test = 4
+bs = 16
+batch_size_test = 16
 
 train_loader, test_loader = define_landscapes_loaders(bs, batch_size_test, 
                                                       rescale=256,
                                                       crop=224,
-                                                      rgb=False)
+                                                      rgb=True)
 
 # encoding_dim = 2048
-lr = 0.0002
+lr = 0.00005
 n_epoch = 10
 
 # build network
-z_dim = 100
+z_dim = 128
 landscape_dim = 224*224
 
-G = Generator(g_input_dim = z_dim, g_output_dim = landscape_dim).to(device)
-D = Discriminator(landscape_dim).to(device)
+G = Generator_224(z_dim).to(device)
+D = Discriminator_224().to(device)
 
-print(G)
-print(D)
+# print(G)
+# print(D)
 
 # loss
 criterion = nn.BCELoss() 
@@ -42,21 +43,22 @@ G_optimizer = optim.Adam(G.parameters(), lr = lr)
 D_optimizer = optim.Adam(D.parameters(), lr = lr)
 
 
+
 def D_train(x):
     #=======================Train the discriminator=======================#
     D.zero_grad()
 
     # train discriminator on real
-    x_real, y_real = x.view(-1, landscape_dim), torch.ones(bs, 1)
-    x_real, y_real = Variable(x_real.to(device)), Variable(y_real.to(device))
+    x_real, y_real = x.view(-1, 3, 224 , 224).to(device), torch.ones(bs, 1).to(device)
+    #x_real, y_real = Variable(x_real.to(device)), Variable(y_real.to(device))
 
     D_output = D(x_real)
     D_real_loss = criterion(D_output, y_real)
     D_real_score = D_output
 
     # train discriminator on facke
-    z = Variable(torch.randn(bs, z_dim).to(device))
-    x_fake, y_fake = G(z), Variable(torch.zeros(bs, 1).to(device))
+    z = torch.randn(bs, z_dim).to(device)
+    x_fake, y_fake = G(z), torch.zeros(bs, 1).to(device)
 
     D_output = D(x_fake)
     D_fake_loss = criterion(D_output, y_fake)
@@ -73,8 +75,8 @@ def G_train(x):
     #=======================Train the generator=======================#
     G.zero_grad()
 
-    z = Variable(torch.randn(bs, z_dim).to(device))
-    y = Variable(torch.ones(bs, 1).to(device))
+    z = torch.randn(bs, z_dim).to(device)
+    y = torch.ones(bs, 1).to(device)
 
     G_output = G(z)
     D_output = D(G_output)
@@ -89,7 +91,7 @@ def G_train(x):
 
 for epoch in range(1, n_epoch+1):           
     D_losses, G_losses = [], []
-    for batch_idx, (x) in enumerate(train_loader):
+    for batch_idx, (x) in enumerate(tqdm(train_loader)):
         if(x.size()[0] < bs) : continue
         D_losses.append(D_train(x))
         G_losses.append(G_train(x))
@@ -100,7 +102,7 @@ for epoch in range(1, n_epoch+1):
 
 #Output
 with torch.no_grad():
-    test_z = Variable(torch.randn(bs, z_dim).to(device))
+    test_z = torch.randn(bs, z_dim).to(device)
     generated = G(test_z)
 
-    save_image(generated.view(generated.size(0), 1, 224, 224), './test' + '.png')
+    save_image(generated.view(generated.size(0), 3, 224, 224), './test' + '.png')
