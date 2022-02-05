@@ -22,8 +22,9 @@ train_loader, test_loader = define_landscapes_loaders(bs, batch_size_test,
                                                       crop=224,
                                                       rgb=True)
 
+
 lr = 0.00005
-n_epoch = 10
+n_epoch = 100
 
 # build network
 z_dim = 128
@@ -48,17 +49,20 @@ def D_train(x):
     #=======================Train the discriminator=======================#
     D.zero_grad()
 
+
     # train discriminator on real
-    x_real, y_real = x.view(-1, 3, 224 , 224).to(device), torch.ones(bs, 1).to(device)
-    #x_real, y_real = Variable(x_real.to(device)), Variable(y_real.to(device))
+    x_real = x.view(-1, 3, 224 , 224).to(device)
+    size = len(x_real)
+
+    y_real = torch.ones(size, 1).to(device)
 
     D_output = D(x_real)
     D_real_loss = criterion(D_output, y_real)
     D_real_score = D_output
 
     # train discriminator on facke
-    z = torch.randn(bs, z_dim).to(device)
-    x_fake, y_fake = G(z), torch.zeros(bs, 1).to(device)
+    z = torch.randn(size, z_dim).to(device)
+    x_fake, y_fake = G(z), torch.zeros(size, 1).to(device)
 
     D_output = D(x_fake)
     D_fake_loss = criterion(D_output, y_fake)
@@ -113,10 +117,10 @@ if __name__ == "__main__":
                 (epoch), n_epoch, D_current_loss, G_current_loss))
 
         if (savefile is not None) and (epoch % 10 == 0) and (epoch > 0):
-                torch.save(G.state_dict(), f"saved_models/{savefile}_generator.sav")
-                torch.save(D.state_dict(), f"saved_models/{savefile}_discriminator.sav")
-                pd.DataFrame(data=np.array([D_current_loss, G_current_loss]).T, 
-                    columns = ["discriminator", "generator"]).to_csv(f"saved_models/{savefile}.csv", index=False)
+            torch.save(G.state_dict(), f"saved_models/{savefile}_generator.sav")
+            torch.save(D.state_dict(), f"saved_models/{savefile}_discriminator.sav")
+            pd.DataFrame(data=np.array([D_losses, G_losses]).T, 
+                columns = ["discriminator", "generator"]).to_csv(f"saved_models/{savefile}.csv", index=False)
 
 
     #Output
