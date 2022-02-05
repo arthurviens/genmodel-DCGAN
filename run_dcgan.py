@@ -23,8 +23,8 @@ train_loader = define_lhq_loaders(bs, batch_size_test,
                                     rgb=True,
                                     test_set=False)
 
-lr = 0.0005
-n_epoch = 10
+lr = 0.00005
+n_epoch = 20
 
 # build network
 z_dim = 128
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     D_losses, G_losses = [], []
     savefile = 'gan'
 
-    for epoch in range(1, n_epoch+1):           
+    for epoch in range(1, n_epoch+1):
         D_current_loss, G_current_loss = 0.0, 0.0
         count = 0
 
