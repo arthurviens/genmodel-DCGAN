@@ -3,6 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 from skimage import io, transform
 from torch import is_tensor, from_numpy
 from torchvision import transforms, utils, datasets
+from sklearn.model_selection import train_test_split
 import os
 
 
@@ -120,9 +121,9 @@ def define_mnist_loaders(bs_train, bs_test):
 
 
 class CustomDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, files, transform=None):
         self.root_dir = root_dir
-        self.files = [os.path.join(root_dir, f) for f in os.listdir(root_dir)]
+        self.files = [os.path.join(root_dir, f) for f in files]
         self.transform = transform
 
         if len(self.files) < 1 :
@@ -151,11 +152,12 @@ class CustomDataset(Dataset):
 
 
 class Data_Loaders():
-    def __init__(self, root_dir, bs_train, bs_test, rgb, rescale, crop):
+    def __init__(self, root_dir, rgb, rescale, crop, bs_train=16, bs_test=16, test_set=True):
         self.root_dir = root_dir
         ls = os.listdir(root_dir)
-        if not (("train" in ls) & ("test" in ls)):
-            raise ValueError(f"No train and test directories at root_dir {root_dir}")
+
+        if test_set:
+            train_files, test_files = train_test_split(ls, test_size=0.1, shuffle=True, random_state=113)
 
         if rgb:
             transformations = transforms.Compose([
@@ -172,26 +174,44 @@ class Data_Loaders():
                                                ToTensor(),
                                                transforms.RandomHorizontalFlip(p=0.5)
                                            ])
-            
-        self.train_set = CustomDataset(os.path.join(self.root_dir, "train"), transform = transformations) 
-                        
-        self.test_set = CustomDataset(os.path.join(self.root_dir, "test"), transform = transformations)
+        
+        if test_set:
+            train_set = CustomDataset(self.root_dir, train_files, transform = transformations) 
+            test_set = CustomDataset(self.root_dir, test_files, transform = transformations) 
 
-        self.train_loader = DataLoader(self.train_set, batch_size = bs_train,
+            self.train_loader = DataLoader(train_set, batch_size = bs_train,
                                         shuffle=True, num_workers=16, prefetch_factor=8)
-        self.test_loader = DataLoader(self.test_set, batch_size = bs_test,
+            self.test_loader = DataLoader(test_set, batch_size = bs_test,
                                         num_workers=16, prefetch_factor=8)
 
 
+        else:
+            train_set = CustomDataset(self.root_dir, ls, transform = transformations) 
+            self.train_loader = DataLoader(train_set, batch_size = bs_train,
+                                        shuffle=True, num_workers=16, prefetch_factor=8)
+                                        
 
 
-def define_landscapes_loaders(bs_train, bs_test, rgb=True, rescale=32, crop=28):
-    dataset = Data_Loaders("data/landscapes", bs_train, bs_test, rgb, rescale, crop)
 
-    return dataset.train_loader, dataset.test_loader
+
+
+
+
+def define_landscapes_loaders(bs_train=16, bs_test=16, rgb=True, rescale=32, crop=28, test_set=True):
+    dataset = Data_Loaders("data/landscapes", rgb, rescale, crop, bs_train=bs_train,
+                bs_test=bs_test, test_set=test_set)
+    if test_set:
+        return dataset.train_loader, dataset.test_loader
+    else:
+        return dataset.train_loader
     
-def define_lhq_loaders(bs_train, bs_test, rgb=True, rescale=256, crop=224):
-    dataset = Data_Loaders("data/lhq_256", bs_train, bs_test, rgb, rescale, crop)
 
-    return dataset.train_loader, dataset.test_loader
+def define_lhq_loaders(bs_train=16, bs_test=16, rgb=True, rescale=256, crop=224, test_set=True):
+    dataset = Data_Loaders("data/lhq_256", rgb, rescale, crop, bs_train=bs_train,
+                bs_test=bs_test, test_set=test_set)
+
+    if test_set:
+        return dataset.train_loader, dataset.test_loader
+    else:
+        return dataset.train_loader
     
