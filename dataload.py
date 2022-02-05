@@ -190,3 +190,8 @@ def define_landscapes_loaders(bs_train, bs_test, rgb=True, rescale=32, crop=28):
 
     return dataset.train_loader, dataset.test_loader
     
+def define_lhq_loaders(bs_train, bs_test, rgb=True, rescale=256, crop=224):
+    dataset = Data_Loaders("data/lhq_256", bs_train, bs_test, rgb, rescale, crop)
+
+    return dataset.train_loader, dataset.test_loader
+    

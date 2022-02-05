@@ -216,31 +216,31 @@ class C_Encoder_224(nn.Module):
         super().__init__()
         
         ### Convolutional section
-        self.enc_conv1 = nn.Conv2d(3, 64, (7,7), stride=1, padding=3) # 64 * 224 * 224
+        self.enc_conv1 = nn.Conv2d(3, 64, (7,7), stride=1, padding=3, bias=False) # 64 * 224 * 224
         self.batchnorm1 = nn.BatchNorm2d(64)
         self.relu1 = nn.ReLU()
-        self.enc_conv2 = nn.Conv2d(64, 64, (7,7), stride=2, padding=3) # 64 * 112 * 112
+        self.enc_conv2 = nn.Conv2d(64, 64, (7,7), stride=2, padding=3, bias=False) # 64 * 112 * 112
         self.batchnorm2 = nn.BatchNorm2d(64)
         self.relu2 = nn.ReLU()
-        self.enc_conv3 = nn.Conv2d(64, 64, (5, 5), stride=2, padding=2) # 64 * 56 * 56
+        self.enc_conv3 = nn.Conv2d(64, 64, (5, 5), stride=2, padding=2, bias=False) # 64 * 56 * 56
         self.batchnorm3 = nn.BatchNorm2d(64)
         self.relu3 = nn.ReLU()
-        self.enc_conv4 = nn.Conv2d(64, 128, (5, 5), stride=1, padding=2) # 128 * 56 * 56
+        self.enc_conv4 = nn.Conv2d(64, 128, (5, 5), stride=1, padding=2, bias=False) # 128 * 56 * 56
         self.batchnorm4 = nn.BatchNorm2d(128)
         self.relu4 = nn.ReLU()
-        self.enc_conv5 = nn.Conv2d(128, 128, (3, 3), stride=2, padding=1) # 128 * 28 * 28
+        self.enc_conv5 = nn.Conv2d(128, 128, (3, 3), stride=2, padding=1, bias=False) # 128 * 28 * 28
         self.batchnorm5 = nn.BatchNorm2d(128)
         self.relu5 = nn.ReLU()
-        self.enc_conv6 = nn.Conv2d(128, 256, (3, 3), stride=2, padding=1) # 256 * 14 * 14
+        self.enc_conv6 = nn.Conv2d(128, 256, (3, 3), stride=2, padding=1, bias=False) # 256 * 14 * 14
         self.batchnorm6 = nn.BatchNorm2d(256)
         self.relu6 = nn.ReLU()
-        self.enc_conv7 = nn.Conv2d(256, 256, (3, 3), stride=1, padding=1) # 256 * 14 * 14
+        self.enc_conv7 = nn.Conv2d(256, 256, (3, 3), stride=1, padding=1, bias=False) # 256 * 14 * 14
         self.batchnorm7 = nn.BatchNorm2d(256)
         self.relu7 = nn.ReLU()
-        self.enc_conv8 = nn.Conv2d(256, 512, (3, 3), stride=2, padding=1) # 512 * 7 * 7
+        self.enc_conv8 = nn.Conv2d(256, 512, (3, 3), stride=2, padding=1, bias=False) # 512 * 7 * 7
         self.batchnorm8 = nn.BatchNorm2d(512)
         self.relu8 = nn.ReLU()
-        self.enc_conv9 = nn.Conv2d(512, 1024, (3, 3), stride=2, padding=1) # 1024 * 4 * 4
+        self.enc_conv9 = nn.Conv2d(512, 1024, (3, 3), stride=2, padding=1, bias=False) # 1024 * 4 * 4
         self.batchnorm9 = nn.BatchNorm2d(1024)
         self.relu9 = nn.ReLU()
         ### Flatten layer

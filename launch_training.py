@@ -14,7 +14,9 @@ from autoencoder import *
 
 def try_model(model, bs_tr, bs_te, resc, crop, lr, n_epochs, opt, wd,
              file_sav):
-    train_loader, test_loader = define_landscapes_loaders(bs_tr, bs_te, rgb=True,
+    #train_loader, test_loader = define_landscapes_loaders(bs_tr, bs_te, rgb=True,
+    #                                                      rescale=resc, crop=crop)
+    train_loader, test_loader = define_lhq_loaders(bs_tr, bs_te, rgb=True,
                                                           rescale=resc, crop=crop)
     
     opti = opt(model.parameters(), lr = lr, weight_decay=wd) # 
@@ -31,8 +33,8 @@ if __name__ == "__main__":
     
     
     autoencoder_1 = C_Autoencoder_224(224*224, 2048)
-    try_model(autoencoder_1, 8, 8, 256, 224, 0.00005, 200, torch.optim.Adam,
-              1e-6, "model_c-autoenc224_adam_n250")
+    try_model(autoencoder_1, 8, 8, 256, 224, 0.00005, 30, torch.optim.Adam,
+              1e-6, "model_c-autoenc224_lhq_adam_n30")
     #autoencoder_2 = C_Autoencoder_224(224*224, 2048)
     #try_model(autoencoder_2, 4, 4, 256, 224, 0.0001, 40, torch.optim.Adadelta,
     #          1e-5, "model_c-autoenc224_adadelta_n150")
