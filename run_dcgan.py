@@ -17,14 +17,14 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 bs = 16
 batch_size_test = 16
 
-train_loader, test_loader = define_landscapes_loaders(bs, batch_size_test, 
-                                                      rescale=256,
-                                                      crop=224,
-                                                      rgb=True)
+train_loader = define_lhq_loaders(bs, batch_size_test, 
+                                    rescale=256,
+                                    crop=224,
+                                    rgb=True,
+                                    test_set=False)
 
-
-lr = 0.00005
-n_epoch = 100
+lr = 0.0005
+n_epoch = 10
 
 # build network
 z_dim = 128
