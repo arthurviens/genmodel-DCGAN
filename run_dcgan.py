@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from dataload import *
 from models import *
 from tqdm import tqdm
+import pandas as pd
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -21,7 +22,6 @@ train_loader, test_loader = define_landscapes_loaders(bs, batch_size_test,
                                                       crop=224,
                                                       rgb=True)
 
-# encoding_dim = 2048
 lr = 0.00005
 n_epoch = 10
 
@@ -68,7 +68,7 @@ def D_train(x):
     D_loss = D_real_loss + D_fake_loss
     D_loss.backward()
     D_optimizer.step()
-        
+
     return  D_loss.data.item()
 
 def G_train(x):
@@ -85,24 +85,43 @@ def G_train(x):
     # gradient backprop & optimize ONLY G's parameters
     G_loss.backward()
     G_optimizer.step()
-        
+    
+
     return G_loss.data.item()
 
 
-for epoch in range(1, n_epoch+1):           
+if __name__ == "__main__":
     D_losses, G_losses = [], []
-    for batch_idx, (x) in enumerate(tqdm(train_loader)):
-        if(x.size()[0] < bs) : continue
-        D_losses.append(D_train(x))
-        G_losses.append(G_train(x))
+    savefile = 'gan'
 
-    print('[%d/%d]: loss_d: %.3f, loss_g: %.3f' % (
-            (epoch), n_epoch, torch.mean(torch.FloatTensor(D_losses)), torch.mean(torch.FloatTensor(G_losses))))
+    for epoch in range(1, n_epoch+1):           
+        D_current_loss, G_current_loss = 0.0, 0.0
+        count = 0
+
+        for batch_idx, (x) in enumerate(tqdm(train_loader)):
+            D_current_loss += D_train(x)
+            G_current_loss += G_train(x)
+            count += len(x)
+
+        D_current_loss /= count
+        G_current_loss /= count
+
+        D_losses.append(D_current_loss)
+        G_losses.append(G_current_loss)
+
+        print('[%d/%d]: loss_d: %.3f, loss_g: %.3f' % (
+                (epoch), n_epoch, D_current_loss, G_current_loss))
+
+        if (savefile is not None) and (epoch % 10 == 0) and (epoch > 0):
+                torch.save(G.state_dict(), f"saved_models/{savefile}_generator.sav")
+                torch.save(D.state_dict(), f"saved_models/{savefile}_discriminator.sav")
+                pd.DataFrame(data=np.array([D_current_loss, G_current_loss]).T, 
+                    columns = ["discriminator", "generator"]).to_csv(f"saved_models/{savefile}.csv", index=False)
 
 
-#Output
-with torch.no_grad():
-    test_z = torch.randn(bs, z_dim).to(device)
-    generated = G(test_z)
+    #Output
+    with torch.no_grad():
+        test_z = torch.randn(bs, z_dim).to(device)
+        generated = G(test_z)
 
-    save_image(generated.view(generated.size(0), 3, 224, 224), './test' + '.png')
+        save_image(generated.view(generated.size(0), 3, 224, 224), './generated_batch' + '.png')
