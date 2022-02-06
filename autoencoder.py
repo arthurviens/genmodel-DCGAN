@@ -210,6 +210,10 @@ class C_Autoencoder_28(nn.Module):
         return x
 
 
+
+
+
+
 debug=False
 class C_Encoder_224(nn.Module):
     def __init__(self, fc2_input_dim, encoded_space_dim):
@@ -240,6 +244,7 @@ class C_Encoder_224(nn.Module):
         self.enc_conv8 = nn.Conv2d(256, 512, (3, 3), stride=2, padding=1, bias=False) # 512 * 7 * 7
         self.batchnorm8 = nn.BatchNorm2d(512)
         self.relu8 = nn.ReLU()
+        #self.block7 = ResConvBlock(256, 512, stride=2)
         self.enc_conv9 = nn.Conv2d(512, 1024, (3, 3), stride=2, padding=1, bias=False) # 1024 * 4 * 4
         self.batchnorm9 = nn.BatchNorm2d(1024)
         self.relu9 = nn.ReLU()
@@ -284,6 +289,8 @@ class C_Encoder_224(nn.Module):
         x = self.batchnorm8(x)
         x = self.relu8(x)
         if debug: print(f"After conv8 {x.shape}")
+        #x = self.block7(x)
+        #if debug: print(f"After block7 {x.shape}")
         x = self.enc_conv9(x)
         x = self.batchnorm9(x)
         x = self.relu9(x)
@@ -317,6 +324,7 @@ class C_Decoder_224(nn.Module):
         self.dec_convt4 = nn.ConvTranspose2d(256, 128, 2, stride=2, padding=1)
         self.batchnorm4 = nn.BatchNorm2d(128)
         self.relu4 = nn.ReLU()
+        #self.upblock3 = ResUpConvBlock(256, 128, stride=2)
         self.dec_convt5 = nn.ConvTranspose2d(128, 128, 2, stride=2)
         self.batchnorm5 = nn.BatchNorm2d(128)
         self.relu5 = nn.ReLU()
@@ -354,6 +362,7 @@ class C_Decoder_224(nn.Module):
         x = self.dec_convt4(x)
         x = self.batchnorm4(x)
         x = self.relu4(x)
+        #x = self.upblock3(x)
         if debug: print(f"After transposed conv 4 {x.shape}")
         x = self.dec_convt5(x)
         x = self.batchnorm5(x)
@@ -383,33 +392,209 @@ class C_Autoencoder_224(nn.Module):
         self.input_size = input_size
         self.encoder = C_Encoder_224(input_size, encoding_dim)
         self.decoder = C_Decoder_224(encoding_dim, input_size)
-        #Encoder
-        #self.conv1 = nn.Conv2d(3, 16, 3, padding=1)  
-        #self.conv2 = nn.Conv2d(16, 4, 3, padding=1)
-        #self.pool = nn.MaxPool2d(2, 2)
-       
-        #Decoder
-        #self.t_conv1 = nn.ConvTranspose2d(4, 16, 2, stride=2)
-        #self.t_conv2 = nn.ConvTranspose2d(16, 3, 2, stride=2)
-    
 
     def forward(self, x):
         x = self.encoder(x) # here we get the latent z
         x = self.decoder(x) # here we get the reconsturcted input
-        """print(f"Encoder ")
-        x = F.relu(self.conv1(x))
-        print(f"Encoder conv 1 {x.shape}")
-        x = self.pool(x)
-        print(f"Encoder pool 1 {x.shape}")
-        x = F.relu(self.conv2(x))
-        print(f"Encoder conv 2 {x.shape}")
-        x = self.pool(x)
-        print(f"Encoder pool 2 {x.shape}")
-        x = F.relu(self.t_conv1(x))
-        print(f"Decoder t conv 1 {x.shape}")
-        x = F.sigmoid(self.t_conv2(x))
-        print(f"Decoder t conv 1 {x.shape}")"""
         x = x.reshape(x.size(0), 3, 224, 224) # reshape this flatten vector to the original image size    
+        return x
+
+
+class ResConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, stride=1):
+        super(ResConvBlock, self).__init__()
+        if not isinstance(stride, int):
+            raise ValueError(f"Wrong value of stride : {stride}, should be int")
+        if (stride != 1) or (in_channels != out_channels):
+          self.skip = nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, 
+                        kernel_size=1, stride=stride, bias=False),
+            nn.BatchNorm2d(out_channels))
+        else:
+          self.skip = None
+        # Both self.conv1 and self.downsample layers downsample the input when stride != 1
+
+        self.block = nn.Sequential(
+            nn.Conv2d(in_channels, in_channels, (3,3), 
+                        stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(in_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels, out_channels, (3,3), 
+                        stride=stride, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels)
+        )
+
+    def forward(self, x):
+        identity = x
+        out = self.block(x)
+
+        if self.skip is not None:
+            identity = self.skip(x)
+
+        out += identity
+        out = F.relu(out)
+
+        return out
+
+
+class ResUpConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, stride=1):
+        super(ResUpConvBlock, self).__init__()
+        if not isinstance(stride, int):
+            raise ValueError(f"Wrong value of stride : {stride}, should be int")
+        if (stride != 1):
+            self.skip1 = nn.Upsample(scale_factor=stride, mode="bilinear", align_corners=True)
+        if (in_channels != out_channels):
+            self.skip2 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
+        if (hasattr(self, "skip1")) and (hasattr(self, "skip2")):
+            self.skip = nn.Sequential(
+                self.skip1,
+                self.skip2,
+                nn.BatchNorm2d(out_channels)
+            )
+        elif (hasattr(self, "skip1")) and (not hasattr(self, "skip2")):
+            self.skip = nn.Sequential(
+                self.skip1,
+                nn.BatchNorm2d(out_channels)
+            )
+        elif (not hasattr(self, "skip1")) and (hasattr(self, "skip2")):
+            self.skip = nn.Sequential(
+                self.skip2,
+                nn.BatchNorm2d(out_channels)
+            )
+        else:
+          self.skip = None
+          
+        if stride > 1:
+            transpose = nn.ConvTranspose2d(in_channels, out_channels, 2,
+                        stride=stride, padding=1, bias=False)
+        else:
+            transpose = nn.ConvTranspose2d(in_channels, out_channels, 2,
+                        stride=1, bias=False)
+        self.block = nn.Sequential(
+            nn.ConvTranspose2d(in_channels, in_channels, 2,  
+                        stride=1, bias=False),
+            nn.BatchNorm2d(in_channels),
+            nn.ReLU(inplace=True),
+            transpose,
+            nn.BatchNorm2d(out_channels)
+        )
+
+    def forward(self, x):
+        identity = x
+        out = self.block(x)
+
+        if self.skip is not None:
+            identity = self.skip(x)
+
+        out = torch.add(identity, out)
+        out = F.relu(out)
+
+        return out
+
+
+class Res_Encoder_224(nn.Module):
+    def __init__(self, encoded_space_dim):
+        super().__init__()
+        
+        ### Convolutional section
+        self.enc_conv1 = nn.Conv2d(3, 64, (7,7), stride=1, padding=3, bias=False) # 64 * 224 * 224
+        self.batchnorm1 = nn.BatchNorm2d(64)
+        self.relu1 = nn.ReLU()
+        self.block2 = ResConvBlock(64, 64, stride=2) # 64 * 112 * 112
+        self.block3 = ResConvBlock(64, 128, stride=2) # 128 * 56 * 56
+        self.block4 = ResConvBlock(128, 128, stride=2) # 128 * 28 * 28
+        self.block5 = ResConvBlock(128, 256, stride=2) # 256 * 14 * 14
+        self.block6 = ResConvBlock(256, 512, stride=2) # 512 * 7 * 7
+        self.block7 = ResConvBlock(512, 1024, stride=2) # 1024 * 4 * 4
+
+        self.flatten = nn.Flatten(start_dim=1)
+        ### Linear section
+        self.encoder_lin = nn.Sequential(
+            nn.Linear(1024 * 4 * 4, encoded_space_dim),
+            nn.ReLU(True)
+        )
+
+        
+    def forward(self, x):
+        x = self.enc_conv1(x)
+        if debug: print(f"After enc conv 1 {x.shape}")
+        x = self.batchnorm1(x)
+        x = self.relu1(x)
+        x = self.block2(x)
+        if debug: print(f"After block2 {x.shape}")
+        x = self.block3(x)
+        if debug: print(f"After block3 {x.shape}")
+        x = self.block4(x)
+        if debug: print(f"After block4 {x.shape}")
+        x = self.block5(x)
+        if debug: print(f"After block5 {x.shape}")
+        x = self.block6(x)
+        if debug: print(f"After block6 {x.shape}")
+        x = self.block7(x)
+        if debug: print(f"After block7 {x.shape}")
+        x = self.flatten(x)
+        if debug: print(f"After flatten {x.shape}")
+        x = self.encoder_lin(x)
+        if debug: print(f"After encoder_linear {x.shape}")
+        return x
+
+
+class Res_Decoder_224(nn.Module):
+    def __init__(self, encoded_space_dim):
+        super().__init__()
+        self.decoder_lin = nn.Sequential(
+            nn.Linear(encoded_space_dim, 1024 * 4 * 4),
+            nn.ReLU(True)
+        )
+        
+        ### Convolutional section
+        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(1024, 4, 4)) # 
+        self.dec_convt1 = nn.ConvTranspose2d(1024, 512, 2, stride=2, padding=1, output_padding=1)
+        self.batchnorm1 = nn.BatchNorm2d(512)
+        self.relu1 = nn.ReLU()
+        self.block2 = ResUpConvBlock(512, 256, stride=2) # 254 * 14 * 14
+        self.block3 = ResUpConvBlock(256, 128, stride=2) # 128 * 28 * 28
+        self.block4 = ResUpConvBlock(128, 128, stride=2) # 128 * 56 * 56
+        self.block5 = ResUpConvBlock(128, 64, stride=2) # 64 * 112 * 112
+        self.block6 = ResUpConvBlock(64, 64, stride=2) # 64 * 224 * 224
+        self.conv7 = nn.Conv2d(64, 3, kernel_size=(1, 1), stride=1)
+        
+    def forward(self, x):
+        x = self.decoder_lin(x)
+        x = self.unflatten(x)
+        if debug: print(f"After unflatten {x.shape}")
+        x = self.dec_convt1(x)
+        x = self.batchnorm1(x)
+        x = self.relu1(x)
+        if debug: print(f"After dec_convt1 {x.shape}")
+        x = self.block2(x)
+        if debug: print(f"After block2 {x.shape}")
+        x = self.block3(x)
+        if debug: print(f"After block3 {x.shape}")
+        x = self.block4(x)
+        if debug: print(f"After block4 {x.shape}")
+        x = self.block5(x)
+        if debug: print(f"After block5 {x.shape}")
+        x = self.block6(x)
+        if debug: print(f"After block6 {x.shape}")
+        x = self.conv7(x)
+        if debug: print(f"After dec_convt 7 {x.shape}")
+        x = torch.sigmoid(x)
+        return x
+
+
+class Res_Autoencoder_224(nn.Module):
+    def __init__(self, input_size = 224*224, encoding_dim = 1024):
+        super().__init__()
+        self.input_size = input_size
+        self.encoder = Res_Encoder_224(encoding_dim)
+        self.decoder = Res_Decoder_224(encoding_dim)
+
+    def forward(self, x):
+        x = self.encoder(x) # here we get the latent z
+        x = self.decoder(x) # here we get the reconsturcted input
+        x = x.reshape(-1, 3, 224, 224) # reshape this flatten vector to the original image size    
         return x
 
 
