@@ -27,11 +27,22 @@ lr = 0.00001
 n_epoch = 100
 
 # build network
-z_dim = 128
+z_dim = 128 
 # landscape_dim = 224*224
 
+# G = torch.load(f"saved_models/gan_generator_train.sav")
+# D = torch.load(f"saved_models/gan_discriminator_train.sav")
+# G = Generator(z_dim).to(device)
+# D = Discriminator().to(device)
+
 G = Generator(z_dim).to(device)
+G.load_state_dict(torch.load("saved_models/gan_generator.sav"))
+G.eval()
+
 D = Discriminator().to(device)
+D.load_state_dict(torch.load("saved_models/gan_discriminator.sav"))
+D.eval()
+
 
 # print(G)
 # print(D)
