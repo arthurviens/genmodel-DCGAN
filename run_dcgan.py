@@ -17,18 +17,18 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 bs = 16
 batch_size_test = 16
 
-train_loader = define_lhq_loaders(bs, batch_size_test, 
+train_loader = define_landscapes_loaders(bs, batch_size_test, 
                                     rescale=256,
                                     crop=224,
                                     rgb=True,
                                     test_set=False)
 
-lr = 0.00005
-n_epoch = 20
+lr = 0.000001
+n_epoch = 300
 
 # build network
 z_dim = 128
-landscape_dim = 224*224
+# landscape_dim = 224*224
 
 G = Generator_224(z_dim).to(device)
 D = Discriminator_224().to(device)
@@ -60,7 +60,7 @@ def D_train(x):
     D_real_loss = criterion(D_output, y_real)
     D_real_score = D_output
 
-    # train discriminator on facke
+    # train discriminator on fake
     z = torch.randn(size, z_dim).to(device)
     x_fake, y_fake = G(z), torch.zeros(size, 1).to(device)
 
@@ -81,6 +81,7 @@ def G_train(x):
 
     z = torch.randn(bs, z_dim).to(device)
     y = torch.ones(bs, 1).to(device)
+    # y = torch.zeros(bs, 1).to(device) #changed this to zeros because it learn backwards
 
     G_output = G(z)
     D_output = D(G_output)
@@ -98,6 +99,8 @@ if __name__ == "__main__":
     D_losses, G_losses = [], []
     savefile = 'gan'
 
+    print(f'Launching for {n_epoch} epochs...')
+    
     for epoch in range(1, n_epoch+1):
         D_current_loss, G_current_loss = 0.0, 0.0
         count = 0
@@ -105,6 +108,7 @@ if __name__ == "__main__":
         for batch_idx, (x) in enumerate(tqdm(train_loader)):
             D_current_loss += D_train(x)
             G_current_loss += G_train(x)
+
             count += len(x)
 
         D_current_loss /= count
