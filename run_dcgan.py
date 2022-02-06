@@ -23,15 +23,15 @@ train_loader = define_landscapes_loaders(bs, batch_size_test,
                                     rgb=True,
                                     test_set=False)
 
-lr = 0.000001
-n_epoch = 300
+lr = 0.00005
+n_epoch = 100
 
 # build network
 z_dim = 128
 # landscape_dim = 224*224
 
-G = Generator_224(z_dim).to(device)
-D = Discriminator_224().to(device)
+G = Generator(z_dim).to(device)
+D = Discriminator().to(device)
 
 # print(G)
 # print(D)
@@ -58,7 +58,6 @@ def D_train(x):
 
     D_output = D(x_real)
     D_real_loss = criterion(D_output, y_real)
-    D_real_score = D_output
 
     # train discriminator on fake
     z = torch.randn(size, z_dim).to(device)
@@ -66,7 +65,6 @@ def D_train(x):
 
     D_output = D(x_fake)
     D_fake_loss = criterion(D_output, y_fake)
-    D_fake_score = D_output
 
     # gradient backprop & optimize ONLY D's parameters
     D_loss = D_real_loss + D_fake_loss
@@ -97,7 +95,8 @@ def G_train(x):
 
 if __name__ == "__main__":
     D_losses, G_losses = [], []
-    savefile = 'gan'
+    savefile = 'res-gan'
+    k = 3
 
     print(f'Launching for {n_epoch} epochs...')
     
