@@ -418,7 +418,7 @@ class ResConvBlock(nn.Module):
             nn.Conv2d(in_channels, in_channels, (3,3), 
                         stride=1, padding=1, bias=False),
             nn.BatchNorm2d(in_channels),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
             nn.Conv2d(in_channels, out_channels, (3,3), 
                         stride=stride, padding=1, bias=False),
             nn.BatchNorm2d(out_channels)
@@ -432,7 +432,7 @@ class ResConvBlock(nn.Module):
             identity = self.skip(x)
 
         out += identity
-        out = F.relu(out)
+        out = nn.LeakyReLU(out)
 
         return out
 
@@ -500,7 +500,7 @@ class Res_Encoder_224(nn.Module):
         ### Convolutional section
         self.enc_conv1 = nn.Conv2d(3, 64, (7,7), stride=1, padding=3, bias=False) # 64 * 224 * 224
         self.batchnorm1 = nn.BatchNorm2d(64)
-        self.relu1 = nn.ReLU()
+        self.relu1 = nn.ReLU(True)
         self.block2 = ResConvBlock(64, 64, stride=2) # 64 * 112 * 112
         self.block3 = ResConvBlock(64, 128, stride=2) # 128 * 56 * 56
         self.block4 = ResConvBlock(128, 128, stride=2) # 128 * 28 * 28

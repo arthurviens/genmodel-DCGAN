@@ -198,14 +198,13 @@ class Discriminator(nn.Module):
         self.block5 = ResConvBlock(128, 256, stride=2) # 256 * 14 * 14
         self.block6 = ResConvBlock(256, 512, stride=2) # 512 * 7 * 7
         self.block7 = ResConvBlock(512, 1024, stride=2) # 1024 * 4 * 4
+        self.block8 = ResConvBlock(1024, 2048, stride=4) # 2048 * 1 * 1
 
         ### Flatten layer
         self.flatten = nn.Flatten(start_dim=1)
         ### Linear section
         self.discriminator_output = nn.Sequential(
-            nn.Linear(1024 * 4 * 4, 1024),
-            nn.ReLU(True),
-            nn.Linear(1024, 1),
+            nn.Linear(2048, 1),
             nn.Sigmoid()             #fait que la sortie est entre 0 et 1 (bien pour les probabs)
         )
         

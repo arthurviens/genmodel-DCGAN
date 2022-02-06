@@ -37,7 +37,7 @@ D = Discriminator().to(device)
 # print(D)
 
 # loss
-criterion = nn.BCELoss() 
+criterion = nn.BCELoss(reduction="mean") 
 
 # optimizer
 G_optimizer = optim.Adam(G.parameters(), lr = lr)
@@ -49,7 +49,6 @@ def D_train(x):
     #=======================Train the discriminator=======================#
     D.zero_grad()
 
-
     # train discriminator on real
     x_real = x.view(-1, 3, 224 , 224).to(device)
     size = len(x_real)
@@ -58,6 +57,7 @@ def D_train(x):
 
     D_output = D(x_real)
     D_real_loss = criterion(D_output, y_real)
+    D_real_loss.backward()
 
     # train discriminator on fake
     z = torch.randn(size, z_dim).to(device)
@@ -65,13 +65,13 @@ def D_train(x):
 
     D_output = D(x_fake)
     D_fake_loss = criterion(D_output, y_fake)
-
+    D_fake_loss.backward()
     # gradient backprop & optimize ONLY D's parameters
-    D_loss = D_real_loss + D_fake_loss
-    D_loss.backward()
+    #D_loss = D_real_loss + D_fake_loss
+    #D_loss.backward()
     D_optimizer.step()
 
-    return  D_loss.data.item()
+    return  (D_real_loss + D_fake_loss).data.item()
 
 def G_train(x):
     #=======================Train the generator=======================#
@@ -79,7 +79,6 @@ def G_train(x):
 
     z = torch.randn(bs, z_dim).to(device)
     y = torch.ones(bs, 1).to(device)
-    # y = torch.zeros(bs, 1).to(device) #changed this to zeros because it learn backwards
 
     G_output = G(z)
     D_output = D(G_output)
@@ -108,7 +107,7 @@ if __name__ == "__main__":
             D_current_loss += D_train(x)
             G_current_loss += G_train(x)
 
-            count += len(x)
+            count += len(x)/bs
 
         D_current_loss /= count
         G_current_loss /= count
