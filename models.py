@@ -182,12 +182,178 @@ class Generator_224(nn.Module):
 ################################################################################
 ################################################################################
 ################################################################################
+def activation_func(activation):
+    return  nn.ModuleDict([
+        ['relu', nn.ReLU(inplace=True)],
+        ['leaky_relu', nn.LeakyReLU(negative_slope=0.01, inplace=True)],
+        ['selu', nn.SELU(inplace=True)],
+        ['none', nn.Identity()]
+    ])[activation]
+
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, activation='relu'):
+        super().__init__()
+        self.in_channels, self.out_channels, self.activation = in_channels, out_channels, activation
+        self.blocks = nn.Identity()
+        self.activate = activation_func(activation)
+        self.shortcut = nn.Identity()   
+    
+    def forward(self, x):
+        residual = x
+        if self.should_apply_shortcut: residual = self.shortcut(x)
+        x = self.blocks(x)
+        x = torch.add(x,residual)
+        x = self.activate(x)
+        return x
+    
+    @property
+    def should_apply_shortcut(self):
+        return self.in_channels != self.out_channels
+
+class ResNetResidualBlock(ResidualBlock):
+    def __init__(self, in_channels, out_channels, expansion=1, downsampling=1, *args, **kwargs):
+        super().__init__(in_channels, out_channels, *args, **kwargs)
+        self.expansion, self.downsampling = expansion, downsampling
+        self.shortcut = nn.Sequential(
+            nn.Conv2d(self.in_channels, self.expanded_channels, kernel_size=1,
+                      stride=self.downsampling, bias=False),
+            nn.BatchNorm2d(self.expanded_channels)) if self.should_apply_shortcut else None
+        
+        
+    @property
+    def expanded_channels(self):
+        return self.out_channels * self.expansion
+    
+    @property
+    def should_apply_shortcut(self):
+        return self.in_channels != self.expanded_channels
+
+
+class Generator(nn.Module):
+    def __init__(self, input_dim):
+        super().__init__()
+        self.generator_lin = nn.Sequential(
+            nn.Linear(input_dim, 1024 *4*4),
+            nn.ReLU(True),
+            )
+
+        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(1024, 4, 4))
+        self.dec_convt1 = nn.ConvTranspose2d(1024, 512, 2, stride=2, padding=1, output_padding=1, bias=False)
+        self.batchnorm1 = nn.BatchNorm2d(512)
+        self.relu1 = nn.ReLU(True)
+        self.dec_convt2 = nn.ConvTranspose2d(512, 256, 2, stride=2, bias=False)
+        self.batchnorm2 = nn.BatchNorm2d(256)
+        self.relu2 = nn.ReLU(True)
+        self.dec_convt3 = nn.ConvTranspose2d(256, 256, 2, stride=1, bias=False)
+        self.batchnorm3 = nn.BatchNorm2d(256)
+        self.relu3 = nn.ReLU(True)
+
+        self.resBlock = ResNetResidualBlock(256, 256)
+
+        self.dec_convt4 = nn.ConvTranspose2d(256, 128, 2, stride=2, padding=1, bias=False)
+        self.batchnorm4 = nn.BatchNorm2d(128)
+        self.relu4 = nn.ReLU(True)
+
+
+        self.resBlock2 = ResNetResidualBlock(128, 128)
+        
+        
+        self.dec_convt5 = nn.ConvTranspose2d(128, 128, 2, stride=2, bias=False)
+        self.batchnorm5 = nn.BatchNorm2d(128)
+        self.relu5 = nn.ReLU(True)
+
+
+        self.resBlock3 = ResNetResidualBlock(128, 128)
+        
+        
+        self.dec_convt6 = nn.ConvTranspose2d(128, 64, 2, stride=1, bias=False)
+        self.batchnorm6 = nn.BatchNorm2d(64)
+        self.relu6 = nn.ReLU(True)
+        
+        
+        self.resBlock4 = ResNetResidualBlock(64, 64)
+        
+        
+        self.dec_convt7 = nn.ConvTranspose2d(64, 64, 2, stride=2, padding=1, bias=False)
+        self.batchnorm7 = nn.BatchNorm2d(64)
+        self.relu7 = nn.ReLU(True)
+        
+        
+        self.resBlock5 = ResNetResidualBlock(64, 64)
+        
+        
+        self.dec_convt8 = nn.ConvTranspose2d(64, 64, 2, stride=1, bias=False)
+        self.batchnorm8 = nn.BatchNorm2d(64)
+        self.relu8 = nn.ReLU(True)
+        self.dec_convt9 = nn.ConvTranspose2d(64, 3, 2, stride=2, padding=1, bias=False)
+
+
+    def forward(self, x):
+        if debug: print("GENERATOR")
+        if debug: print(f"Start {x.shape}")
+        x = self.generator_lin(x)
+        if debug: print(f"After generator_lin {x.shape}")
+        x = self.unflatten(x)
+        if debug: print(f"After unflatten {x.shape}")
+        x = self.dec_convt1(x)
+        x = self.batchnorm1(x)
+        x = self.relu1(x)
+        if debug: print(f"After transposed conv 1 {x.shape}")
+        x = self.dec_convt2(x)
+        x = self.batchnorm2(x)
+        x = self.relu2(x)
+        if debug: print(f"After transposed conv 2 {x.shape}")
+        x = self.dec_convt3(x)
+        x = self.batchnorm3(x)
+        x = self.relu3(x)
+
+        x = self.resBlock(x)
+
+        if debug: print(f"After transposed conv 3 {x.shape}")
+        x = self.dec_convt4(x)
+        x = self.batchnorm4(x)
+        x = self.relu4(x)
+
+        x = self.resBlock2(x)
+
+        if debug: print(f"After transposed conv 4 {x.shape}")
+        x = self.dec_convt5(x)
+        x = self.batchnorm5(x)
+        x = self.relu5(x)
+
+        x = self.resBlock3(x)
+
+
+        if debug: print(f"After transposed conv 5 {x.shape}")
+        x = self.dec_convt6(x)
+        x = self.batchnorm6(x)
+        x = self.relu6(x)
+
+        x = self.resBlock4(x)
+
+
+        if debug: print(f"After transposed conv 6 {x.shape}")
+        x = self.dec_convt7(x)
+        x = self.batchnorm7(x)
+        x = self.relu7(x)
+
+        x = self.resBlock5(x)
+
+
+        if debug: print(f"After transposed conv 7 {x.shape}")
+        x = self.dec_convt8(x)
+        x = self.batchnorm8(x)
+        x = self.relu8(x)
+        if debug: print(f"After transposed conv 8 {x.shape}")
+        x = self.dec_convt9(x)
+        if debug: print(f"After transposed conv 9 {x.shape}")
+        x = torch.tanh(x)
+        return x
+
 
 class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
-        
-        ### Convolutional section
         self.enc_conv1 = nn.Conv2d(3, 64, (7,7), stride=1, padding=3, bias=False) # 64 * 224 * 224
         self.batchnorm1 = nn.BatchNorm2d(64)
         self.relu1 = nn.ReLU(True)
@@ -269,85 +435,3 @@ class Discriminator(nn.Module):
         if debug: print(f"After discriminator_output {x.shape}")
         return x
 
-
-class Generator(nn.Module):
-    def __init__(self, input_dim):
-        super().__init__()
-        self.generator_lin = nn.Sequential(
-            nn.Linear(input_dim, 1024),
-            nn.ReLU(True),
-            nn.Linear(1024, 1024 * 4 * 4),
-            nn.ReLU(True)
-            )
-
-        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(1024, 4, 4))
-        self.dec_convt1 = nn.ConvTranspose2d(1024, 512, 2, stride=2, padding=1, output_padding=1, bias=False)
-        self.batchnorm1 = nn.BatchNorm2d(512)
-        self.relu1 = nn.ReLU(True)
-        self.dec_convt2 = nn.ConvTranspose2d(512, 256, 2, stride=2, bias=False)
-        self.batchnorm2 = nn.BatchNorm2d(256)
-        self.relu2 = nn.ReLU(True)
-        self.dec_convt3 = nn.ConvTranspose2d(256, 256, 2, stride=1, bias=False)
-        self.batchnorm3 = nn.BatchNorm2d(256)
-        self.relu3 = nn.ReLU(True)
-        self.dec_convt4 = nn.ConvTranspose2d(256, 128, 2, stride=2, padding=1, bias=False)
-        self.batchnorm4 = nn.BatchNorm2d(128)
-        self.relu4 = nn.ReLU(True)
-        self.dec_convt5 = nn.ConvTranspose2d(128, 128, 2, stride=2, bias=False)
-        self.batchnorm5 = nn.BatchNorm2d(128)
-        self.relu5 = nn.ReLU(True)
-        self.dec_convt6 = nn.ConvTranspose2d(128, 64, 2, stride=1, bias=False)
-        self.batchnorm6 = nn.BatchNorm2d(64)
-        self.relu6 = nn.ReLU(True)
-        self.dec_convt7 = nn.ConvTranspose2d(64, 64, 2, stride=2, padding=1, bias=False)
-        self.batchnorm7 = nn.BatchNorm2d(64)
-        self.relu7 = nn.ReLU(True)
-        self.dec_convt8 = nn.ConvTranspose2d(64, 64, 2, stride=1, bias=False)
-        self.batchnorm8 = nn.BatchNorm2d(64)
-        self.relu8 = nn.ReLU(True)
-        self.dec_convt9 = nn.ConvTranspose2d(64, 3, 2, stride=2, padding=1, bias=False)
-
-
-    def forward(self, x):
-        if debug: print("GENERATOR")
-        if debug: print(f"Start {x.shape}")
-        x = self.generator_lin(x)
-        if debug: print(f"After decoder_lin {x.shape}")
-        x = self.unflatten(x)
-        if debug: print(f"After unflatten {x.shape}")
-        x = self.dec_convt1(x)
-        x = self.batchnorm1(x)
-        x = self.relu1(x)
-        if debug: print(f"After transposed conv 1 {x.shape}")
-        x = self.dec_convt2(x)
-        x = self.batchnorm2(x)
-        x = self.relu2(x)
-        if debug: print(f"After transposed conv 2 {x.shape}")
-        x = self.dec_convt3(x)
-        x = self.batchnorm3(x)
-        x = self.relu3(x)
-        if debug: print(f"After transposed conv 3 {x.shape}")
-        x = self.dec_convt4(x)
-        x = self.batchnorm4(x)
-        x = self.relu4(x)
-        if debug: print(f"After transposed conv 4 {x.shape}")
-        x = self.dec_convt5(x)
-        x = self.batchnorm5(x)
-        x = self.relu5(x)
-        if debug: print(f"After transposed conv 5 {x.shape}")
-        x = self.dec_convt6(x)
-        x = self.batchnorm6(x)
-        x = self.relu6(x)
-        if debug: print(f"After transposed conv 6 {x.shape}")
-        x = self.dec_convt7(x)
-        x = self.batchnorm7(x)
-        x = self.relu7(x)
-        if debug: print(f"After transposed conv 7 {x.shape}")
-        x = self.dec_convt8(x)
-        x = self.batchnorm8(x)
-        x = self.relu8(x)
-        if debug: print(f"After transposed conv 8 {x.shape}")
-        x = self.dec_convt9(x)
-        if debug: print(f"After transposed conv 9 {x.shape}")
-        x = torch.tanh(x)
-        return x

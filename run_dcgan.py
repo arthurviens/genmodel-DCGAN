@@ -23,15 +23,15 @@ train_loader = define_landscapes_loaders(bs, batch_size_test,
                                     rgb=True,
                                     test_set=False)
 
-lr = 0.000001
-n_epoch = 300
+lr = 0.00001
+n_epoch = 100
 
 # build network
 z_dim = 128
 # landscape_dim = 224*224
 
-G = Generator_224(z_dim).to(device)
-D = Discriminator_224().to(device)
+G = Generator(z_dim).to(device)
+D = Discriminator().to(device)
 
 # print(G)
 # print(D)
