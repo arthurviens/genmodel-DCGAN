@@ -432,7 +432,7 @@ class ResConvBlock(nn.Module):
             identity = self.skip(x)
 
         out += identity
-        out = nn.LeakyReLU(out)
+        out = F.leaky_relu(out)
 
         return out
 

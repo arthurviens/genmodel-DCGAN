@@ -225,6 +225,8 @@ class Discriminator(nn.Module):
         if debug: print(f"After block6 {x.shape}")
         x = self.block7(x)
         if debug: print(f"After block7 {x.shape}")
+        x = self.block8(x)
+        if debug: print(f"After block8 {x.shape}")
         x = self.flatten(x)
         if debug: print(f"After flatten {x.shape}")
         x = self.discriminator_output(x)
@@ -247,11 +249,11 @@ class Generator(nn.Module):
         self.dec_convt1 = nn.ConvTranspose2d(1024, 512, 2, stride=2, padding=1, output_padding=1)
         self.batchnorm1 = nn.BatchNorm2d(512)
         self.relu1 = nn.ReLU()
-        self.block2 = ResUpConvBlock(512, 256, stride=2) # 254 * 14 * 14
-        self.block3 = ResUpConvBlock(256, 128, stride=2) # 128 * 28 * 28
-        self.block4 = ResUpConvBlock(128, 128, stride=2) # 128 * 56 * 56
-        self.block5 = ResUpConvBlock(128, 64, stride=2) # 64 * 112 * 112
-        self.block6 = ResUpConvBlock(64, 64, stride=2) # 64 * 224 * 224
+        self.block2 = ResUpConvBlock(512, 256, stride=2) # 
+        self.block3 = ResUpConvBlock(256, 128, stride=2) # 
+        self.block4 = ResUpConvBlock(128, 128, stride=2) # 
+        self.block5 = ResUpConvBlock(128, 64, stride=2) # 
+        self.block6 = ResUpConvBlock(64, 64, stride=2) # 
         self.conv7 = nn.Conv2d(64, 3, kernel_size=(1, 1), stride=1)
 
 
@@ -278,5 +280,5 @@ class Generator(nn.Module):
         if debug: print(f"After block6 {x.shape}")
         x = self.conv7(x)
         if debug: print(f"After dec_convt 7 {x.shape}")
-        x = torch.tanh(x)
+        x = torch.sigmoid(x)
         return x

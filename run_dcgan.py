@@ -1,3 +1,4 @@
+from autoencoder import train
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,21 +11,23 @@ from dataload import *
 from models import *
 from tqdm import tqdm
 import pandas as pd
+import numpy as np
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-bs = 16
-batch_size_test = 16
+bs = 128
+batch_size_test = 128
 
-train_loader = define_landscapes_loaders(bs, batch_size_test, 
+train_loader = define_lhq_loaders(bs, batch_size_test, 
                                     rescale=256,
                                     crop=224,
                                     rgb=True,
                                     test_set=False)
 
-lr = 0.00005
-n_epoch = 100
+lr = 0.00008
+beta1 = 0.5
+n_epoch = 50
 
 # build network
 z_dim = 128
@@ -37,12 +40,15 @@ D = Discriminator().to(device)
 # print(D)
 
 # loss
-criterion = nn.BCELoss(reduction="mean") 
+criterion = nn.BCELoss() 
 
 # optimizer
-G_optimizer = optim.Adam(G.parameters(), lr = lr)
-D_optimizer = optim.Adam(D.parameters(), lr = lr)
+G_optimizer = optim.Adam(G.parameters(), lr = lr, betas=(beta1, 0.999))
+D_optimizer = optim.Adam(D.parameters(), lr = lr, betas=(beta1, 0.999))
 
+def add_noise(inputs):
+     noise = torch.clip(torch.randn_like(inputs), min=-1, max=1)
+     return inputs + noise
 
 
 def D_train(x):
@@ -50,7 +56,7 @@ def D_train(x):
     D.zero_grad()
 
     # train discriminator on real
-    x_real = x.view(-1, 3, 224 , 224).to(device)
+    x_real = add_noise(x).view(-1, 3, 224 , 224).to(device)
     size = len(x_real)
 
     y_real = torch.ones(size, 1).to(device)
@@ -61,17 +67,18 @@ def D_train(x):
 
     # train discriminator on fake
     z = torch.randn(size, z_dim).to(device)
-    x_fake, y_fake = G(z), torch.zeros(size, 1).to(device)
+    x_fake, y_fake = add_noise(G(z)), torch.zeros(size, 1).to(device)
+
 
     D_output = D(x_fake)
     D_fake_loss = criterion(D_output, y_fake)
     D_fake_loss.backward()
     # gradient backprop & optimize ONLY D's parameters
-    #D_loss = D_real_loss + D_fake_loss
+    full_loss = D_real_loss + D_fake_loss
     #D_loss.backward()
     D_optimizer.step()
 
-    return  (D_real_loss + D_fake_loss).data.item()
+    return full_loss.data.item()
 
 def G_train(x):
     #=======================Train the generator=======================#
@@ -94,7 +101,7 @@ def G_train(x):
 
 if __name__ == "__main__":
     D_losses, G_losses = [], []
-    savefile = 'res-gan'
+    savefile = 'res-gan-2'
     k = 3
 
     print(f'Launching for {n_epoch} epochs...')
@@ -109,16 +116,21 @@ if __name__ == "__main__":
 
             count += len(x)/bs
 
-        D_current_loss /= count
-        G_current_loss /= count
+            if ((batch_idx % 25 == 0) & (batch_idx > 0)) | (batch_idx == len(train_loader)-1):
+                D_current_loss /= count
+                G_current_loss /= count
 
-        D_losses.append(D_current_loss)
-        G_losses.append(G_current_loss)
+                D_losses.append(D_current_loss)
+                G_losses.append(G_current_loss)
+
+                D_current_loss = 0; G_current_loss=0;
+                count=0
+                
 
         print('[%d/%d]: loss_d: %.3f, loss_g: %.3f' % (
-                (epoch), n_epoch, D_current_loss, G_current_loss))
+                (epoch), n_epoch, np.mean(D_losses[-10:]), np.mean(G_losses[-10:])))
 
-        if (savefile is not None) and (epoch % 10 == 0) and (epoch > 0):
+        if (savefile is not None) and (epoch % 5 == 0) and (epoch > 0):
             torch.save(G.state_dict(), f"saved_models/{savefile}_generator.sav")
             torch.save(D.state_dict(), f"saved_models/{savefile}_discriminator.sav")
             pd.DataFrame(data=np.array([D_losses, G_losses]).T, 
