@@ -33,6 +33,7 @@ n_epoch = 50
 
 # build network
 z_dim = 1024
+labels = torch.full((bs,), 1.0, dtype=torch.float, device=device)
 # landscape_dim = 224*224
 
 G = Generator(z_dim).to(device)
@@ -67,23 +68,25 @@ def D_train(x):
     x_real = x.view(-1, 3, 224 , 224).to(device)
     size = len(x_real)
 
-    y_real = torch.ones(size, 1).to(device)
+    #y_real = torch.ones(size, 1).to(device)
+    labels.fill_(1.0)
 
     D_output = D(x_real)
-    D_real_loss = criterion(D_output, y_real)
+    D_real_loss = criterion(D_output, labels)
     D_real_loss.backward()
-    D_real_acc = accuracy(D_output, y_real)
+    D_real_acc = accuracy(D_output, labels)
 
     # train discriminator on fake
     z = torch.randn(size, z_dim).to(device) 
     with torch.no_grad():
-        x_fake, y_fake = G(z), torch.zeros(size, 1).to(device)
-
+        #x_fake, y_fake = G(z), torch.zeros(size, 1).to(device)
+        x_fake = G(z)
+    labels.fill_(0.0)
 
     D_output = D(x_fake)
-    D_fake_loss = criterion(D_output, y_fake)
+    D_fake_loss = criterion(D_output, labels)
     D_fake_loss.backward()
-    D_fake_acc = accuracy(D_output, y_fake)
+    D_fake_acc = accuracy(D_output, labels)
     # gradient backprop & optimize ONLY D's parameters
     full_loss = D_real_loss + D_fake_loss
     #D_loss.backward()
@@ -96,12 +99,13 @@ def G_train(x):
     G.zero_grad()
 
     z = torch.randn(bs, z_dim).to(device)
-    y = torch.ones(bs, 1).to(device)
+    #y = torch.ones(bs, 1).to(device)
+    labels.fill_(1.0)
 
     G_output = G(z)
     D_output = D(G_output)
-    G_loss = criterion(D_output, y)
-    G_acc = accuracy(D_output, y)
+    G_loss = criterion(D_output, labels)
+    G_acc = accuracy(D_output, labels)
 
     # gradient backprop & optimize ONLY G's parameters
     G_loss.backward()
