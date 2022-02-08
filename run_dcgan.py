@@ -25,12 +25,12 @@ train_loader = define_lhq_loaders(bs, batch_size_test,
                                     rgb=True,
                                     test_set=False)
 
-lr = 0.00008
+lr = 0.0001
 beta1 = 0.5
 n_epoch = 50
 
 # build network
-z_dim = 128
+z_dim = 1024
 # landscape_dim = 224*224
 
 G = Generator(z_dim).to(device)
@@ -56,7 +56,7 @@ def D_train(x):
     D.zero_grad()
 
     # train discriminator on real
-    x_real = add_noise(x).view(-1, 3, 224 , 224).to(device)
+    x_real = x.view(-1, 3, 224 , 224).to(device)
     size = len(x_real)
 
     y_real = torch.ones(size, 1).to(device)
@@ -66,8 +66,8 @@ def D_train(x):
     D_real_loss.backward()
 
     # train discriminator on fake
-    z = torch.randn(size, z_dim).to(device)
-    x_fake, y_fake = add_noise(G(z)), torch.zeros(size, 1).to(device)
+    z = torch.randn(size, z_dim).to(device) 
+    x_fake, y_fake = G(z), torch.zeros(size, 1).to(device)
 
 
     D_output = D(x_fake)
@@ -100,9 +100,9 @@ def G_train(x):
 
 
 if __name__ == "__main__":
-    D_losses, G_losses = [], []
+    D_losses, G_losses = [0], [0]
     savefile = 'res-gan-2'
-    k = 3
+    k = 2 # Facteur d'apprentissage discriminateur
 
     print(f'Launching for {n_epoch} epochs...')
     
@@ -112,11 +112,14 @@ if __name__ == "__main__":
 
         for batch_idx, (x) in enumerate(tqdm(train_loader)):
             D_current_loss += D_train(x)
-            G_current_loss += G_train(x)
+            if batch_idx % 2 == 0:
+                G_current_loss += G_train(x)
+            else:
+                G_current_loss = G_losses[-1]
 
             count += len(x)/bs
 
-            if ((batch_idx % 25 == 0) & (batch_idx > 0)) | (batch_idx == len(train_loader)-1):
+            if ((batch_idx % 2 == 0) & (batch_idx > 0)) | (batch_idx == len(train_loader)-1):
                 D_current_loss /= count
                 G_current_loss /= count
 

@@ -438,7 +438,7 @@ class ResConvBlock(nn.Module):
 
 
 class ResUpConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1):
+    def __init__(self, in_channels, out_channels, stride=1, padding=None):
         super(ResUpConvBlock, self).__init__()
         if not isinstance(stride, int):
             raise ValueError(f"Wrong value of stride : {stride}, should be int")
@@ -465,12 +465,10 @@ class ResUpConvBlock(nn.Module):
         else:
           self.skip = None
           
-        if stride > 1:
-            transpose = nn.ConvTranspose2d(in_channels, out_channels, 2,
-                        stride=stride, padding=1, bias=False)
-        else:
-            transpose = nn.ConvTranspose2d(in_channels, out_channels, 2,
-                        stride=1, bias=False)
+        
+        transpose = nn.ConvTranspose2d(in_channels, out_channels, 2,
+                    stride=stride, padding=1, bias=False)
+
         self.block = nn.Sequential(
             nn.ConvTranspose2d(in_channels, in_channels, 2,  
                         stride=1, bias=False),

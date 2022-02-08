@@ -184,6 +184,8 @@ class Generator_224(nn.Module):
 ################################################################################
 ################################################################################
 
+
+debug=False
 class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
@@ -238,23 +240,23 @@ class Generator(nn.Module):
     def __init__(self, input_dim):
         super().__init__()
         self.generator_lin = nn.Sequential(
-            nn.Linear(input_dim, 1024),
-            nn.ReLU(True),
-            nn.Linear(1024, 1024 * 4 * 4),
+            nn.Linear(input_dim, 2048 * 2 * 2),
             nn.ReLU(True)
             )
 
         ### Convolutional section
-        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(1024, 4, 4)) # 
-        self.dec_convt1 = nn.ConvTranspose2d(1024, 512, 2, stride=2, padding=1, output_padding=1)
-        self.batchnorm1 = nn.BatchNorm2d(512)
-        self.relu1 = nn.ReLU()
-        self.block2 = ResUpConvBlock(512, 256, stride=2) # 
-        self.block3 = ResUpConvBlock(256, 128, stride=2) # 
-        self.block4 = ResUpConvBlock(128, 128, stride=2) # 
-        self.block5 = ResUpConvBlock(128, 64, stride=2) # 
-        self.block6 = ResUpConvBlock(64, 64, stride=2) # 
-        self.conv7 = nn.Conv2d(64, 3, kernel_size=(1, 1), stride=1)
+        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(2048, 2, 2)) # 
+        self.block1 = ResUpConvBlock(2048, 1024, stride=2) # 
+        self.dec_convt2 = nn.ConvTranspose2d(1024, 512, 2, stride=2, padding=1, output_padding=1)
+        self.batchnorm2 = nn.BatchNorm2d(512)
+        self.relu2 = nn.ReLU()
+        self.block3 = ResUpConvBlock(512, 256, stride=2) # 
+        self.block4 = ResUpConvBlock(256, 256, stride=1) # 
+        self.block5 = ResUpConvBlock(256, 128, stride=2) # 
+        self.block6 = ResUpConvBlock(128, 128, stride=2) # 
+        self.block7 = ResUpConvBlock(128, 64, stride=2) # 
+        self.block8 = ResUpConvBlock(64, 3, stride=2) # 
+        #self.conv7 = nn.Conv2d(64, 3, kernel_size=(1, 1), stride=1)
 
 
     def forward(self, x):
@@ -264,12 +266,12 @@ class Generator(nn.Module):
         if debug: print(f"After decoder_lin {x.shape}")
         x = self.unflatten(x)
         if debug: print(f"After unflatten {x.shape}")
-        x = self.dec_convt1(x)
-        x = self.batchnorm1(x)
-        x = self.relu1(x)
-        if debug: print(f"After dec_convt1 {x.shape}")
-        x = self.block2(x)
+        x = self.block1(x)
         if debug: print(f"After block2 {x.shape}")
+        x = self.dec_convt2(x)
+        x = self.batchnorm2(x)
+        x = self.relu2(x)
+        if debug: print(f"After dec_convt1 {x.shape}")
         x = self.block3(x)
         if debug: print(f"After block3 {x.shape}")
         x = self.block4(x)
@@ -278,7 +280,11 @@ class Generator(nn.Module):
         if debug: print(f"After block5 {x.shape}")
         x = self.block6(x)
         if debug: print(f"After block6 {x.shape}")
-        x = self.conv7(x)
-        if debug: print(f"After dec_convt 7 {x.shape}")
+        x = self.block7(x)
+        if debug: print(f"After block7 {x.shape}")
+        x = self.block8(x)
+        if debug: print(f"After block8 {x.shape}")
+        #x = self.conv7(x)
+        #if debug: print(f"After dec_convt 7 {x.shape}")
         x = torch.sigmoid(x)
         return x
