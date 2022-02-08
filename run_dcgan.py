@@ -33,7 +33,7 @@ n_epoch = 50
 
 # build network
 z_dim = 1024
-labels = torch.full((bs,), 1.0, dtype=torch.float, device=device)
+labels = torch.full((bs,1), 1.0, dtype=torch.float, device=device)
 # landscape_dim = 224*224
 
 G = Generator(z_dim).to(device)
@@ -57,7 +57,7 @@ def add_noise(inputs):
 def accuracy(y_pred, y_true):
     y_pred = torch.round(y_pred)
     right = (y_pred == y_true)
-    return torch.sum(right) / len(right)
+    return (torch.sum(right) / len(right))
 
 
 def D_train(x):
@@ -92,7 +92,7 @@ def D_train(x):
     #D_loss.backward()
     D_optimizer.step()
 
-    return full_loss.data.item(), ((D_real_acc + D_fake_acc) / 2)
+    return full_loss.data.item(), ((D_real_acc + D_fake_acc) / 2).item()
 
 def G_train(x):
     #=======================Train the generator=======================#
@@ -112,8 +112,7 @@ def G_train(x):
     G_optimizer.step()
     
 
-    return G_loss.data.item(), G_acc
-
+    return G_loss.data.item(), G_acc.item()
 
 if __name__ == "__main__":
     D_losses, G_losses = [0], [0]
@@ -140,6 +139,7 @@ if __name__ == "__main__":
                 G_losses.append(G_current_loss)
                 D_accs.append(D_current_acc)
                 G_accs.append(G_current_acc)
+
 
                 
 
