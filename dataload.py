@@ -88,6 +88,16 @@ class ToTensor(object):
         return from_numpy(image).float()
 
 
+class PyTMinMaxScalerVectorized(object):
+    """
+    Transforms each channel to the range [0, 1].
+    """
+    def __call__(self, tensor):
+        scale = 1.0 / (tensor.max(dim=1, keepdim=True)[0] - tensor.min(dim=1, keepdim=True)[0]) 
+        tensor.mul_(scale).sub_(tensor.min(dim=1, keepdim=True)[0]) 
+        return ((tensor - 0.5) * 2)
+
+
 class Grayscale(object):
     def __call__(self, image):
         # Convert image to grayscale
@@ -164,6 +174,8 @@ class Data_Loaders():
                                                Rescale(rescale),
                                                RandomCrop(crop),
                                                ToTensor(),
+                                               #PyTMinMaxScalerVectorized(),
+                                               transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                                                transforms.RandomHorizontalFlip(p=0.5)
                                            ])
         else:
@@ -172,6 +184,8 @@ class Data_Loaders():
                                                RandomCrop(crop),
                                                Grayscale(),
                                                ToTensor(),
+                                               transforms.Normalize((0.5), (0.5)),
+                                               #PyTMinMaxScalerVectorized(),
                                                transforms.RandomHorizontalFlip(p=0.5)
                                            ])
         
@@ -214,4 +228,3 @@ def define_lhq_loaders(bs_train=16, bs_test=16, rgb=True, rescale=256, crop=224,
         return dataset.train_loader, dataset.test_loader
     else:
         return dataset.train_loader
-    
