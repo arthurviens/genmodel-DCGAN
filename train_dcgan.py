@@ -47,8 +47,8 @@ D = Discriminator().to(device)
 criterion = nn.BCELoss() 
 
 # optimizer
-G_optimizer = optim.Adam(G.parameters(), lr = 0.0001 / 2, betas=(beta1, 0.999))
-D_optimizer = optim.Adam(D.parameters(), lr = 0.0004 / 2, betas=(beta1, 0.999))
+G_optimizer = optim.Adam(G.parameters(), lr = 0.00001, betas=(beta1, 0.999))
+D_optimizer = optim.Adam(D.parameters(), lr = 0.00005, betas=(beta1, 0.999))
 
 
 def D_train(x):
@@ -131,6 +131,12 @@ if __name__ == "__main__":
         G.load_state_dict(torch.load(f"saved_models/{savefile}_generator.sav"))
         D.load_state_dict(torch.load(f"saved_models/{savefile}_discriminator.sav"))
         print("Resuming training from saved states")
+        losses = pd.read_csv(f"saved_models/{savefile}_losses.csv")
+        acc = pd.read_csv(f"saved_models/{savefile}_accs.csv")
+        D_losses = losses["discriminator"].values.tolist()
+        G_losses = losses["generator"].values.tolist()
+        D_accs = acc["discriminator"].values.tolist()
+        G_accs = acc["generator"].values.tolist()
 
     k = 2 # Facteur d'apprentissage discriminateur
 
