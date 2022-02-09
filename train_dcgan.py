@@ -25,7 +25,7 @@ train_loader = define_loaders(bs, batch_size_test,
 
 #lr = 0.00008
 beta1 = 0.5
-n_epoch = 30
+n_epoch = 150
 save_frequency = 2
 # build network
 z_dim = 1024
@@ -118,9 +118,14 @@ def G_train(x):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process options')
+    #parser.add_argument('-f', type=str, const=2000, nargs="?",
+    #                    help='Number of iterations')
     parser.add_argument('--resume', action="store_true",
                         help='Wether or not to continue training')
+    parser.add_argument('--midsave', action="store_true",
+                        help='Wether or not to continue training')
 
+    # TODO if pas de -f : warn user
     args = parser.parse_args()
 
     D_losses, G_losses = [0], [0]
@@ -185,9 +190,13 @@ if __name__ == "__main__":
             pd.DataFrame(data=np.array([D_accs, G_accs]).T, 
                 columns = ["discriminator", "generator"]).to_csv(f"saved_models/{savefile}_accs.csv", index=False)
 
-        if(epoch%save_frequency == 0):
-            with torch.no_grad():
-                test_z = torch.randn(4, z_dim).to(device)
-                generated = G(test_z)
+        if (savefile is not None) and (epoch % 20 == 0) and (epoch > 0) and (args.midsave):
+            torch.save(G.state_dict(), f"saved_models/{savefile}_generator_epoch{epoch}.sav")
+            torch.save(D.state_dict(), f"saved_models/{savefile}_discriminator_epoch{epoch}.sav")
 
-                save_image(generated.view(generated.size(0), 3, 224, 224), './generated_batchs/generated_batch' + str(epoch) + '.png')
+
+        with torch.no_grad():
+            test_z = torch.randn(4, z_dim).to(device)
+            generated = G(test_z)
+
+            save_image(generated.view(generated.size(0), 3, 224, 224), './generated_batchs/generated_batch' + str(epoch) + '.png')

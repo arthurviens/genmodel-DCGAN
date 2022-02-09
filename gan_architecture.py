@@ -108,7 +108,7 @@ class Discriminator(nn.Module):
         super().__init__()
 
         ### Convolutional section
-        self.block1 = ResConvBlock(3, 64, stride=1)
+        self.block1 = ResConvBlock(3, 64, stride=1) # 64 * 224 * 224
         self.block2 = ResConvBlock(64, 64, stride=2) # 64 * 112 * 112
         self.block3 = ResConvBlock(64, 128, stride=2) # 128 * 56 * 56
         self.block4 = ResConvBlock(128, 128, stride=2) # 128 * 28 * 28
