@@ -228,3 +228,12 @@ def define_lhq_loaders(bs_train=16, bs_test=16, rgb=True, rescale=256, crop=224,
         return dataset.train_loader, dataset.test_loader
     else:
         return dataset.train_loader
+
+def define_loaders(bs_train=16, bs_test=16, rgb=True, rescale=256, crop=224, test_set=False, dataset="data/berry"):
+    dataset = Data_Loaders(dataset, rgb, rescale, crop, bs_train=bs_train,
+                bs_test=bs_test, test_set=test_set)
+
+    if test_set:
+        return dataset.train_loader, dataset.test_loader
+    else:
+        return dataset.train_loader

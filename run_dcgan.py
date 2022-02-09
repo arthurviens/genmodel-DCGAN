@@ -21,7 +21,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 bs = 128
 batch_size_test = 128
 
-train_loader = define_lhq_loaders(bs, batch_size_test, 
+train_loader = define_loaders(bs, batch_size_test, 
                                     rescale=256,
                                     crop=224,
                                     rgb=True,
@@ -29,7 +29,7 @@ train_loader = define_lhq_loaders(bs, batch_size_test,
 
 lr = 0.00008
 beta1 = 0.5
-n_epoch = 50
+n_epoch = 3000
 
 # build network
 z_dim = 1024
@@ -60,7 +60,7 @@ def accuracy(y_pred, y_true):
     return (torch.sum(right) / len(right))
 
 
-def D_train(x):
+def D_train(x):#, labels):
     #=======================Train the discriminator=======================#
     D.zero_grad()
 
@@ -70,6 +70,7 @@ def D_train(x):
 
     #y_real = torch.ones(size, 1).to(device)
     labels.fill_(1.0)
+
 
     D_output = D(x_real)
     D_real_loss = criterion(D_output, labels)
@@ -94,7 +95,7 @@ def D_train(x):
 
     return full_loss.data.item(), ((D_real_acc + D_fake_acc) / 2).item()
 
-def G_train(x):
+def G_train(x):#, labels):
     #=======================Train the generator=======================#
     G.zero_grad()
 
@@ -126,7 +127,18 @@ if __name__ == "__main__":
     for epoch in range(1, n_epoch+1):
 
         for batch_idx, (x) in enumerate(tqdm(train_loader)):
+
+            if(len(x) < bs) :
+                labels = torch.full((len(x),1), 1.0, dtype=torch.float, device=device)
+            elif(len(x) == bs and len(labels) < bs):
+                labels = torch.full((bs,1), 1.0, dtype=torch.float, device=device)
+
+            # if(len(x) == bs) :
             D_current_loss, D_current_acc = D_train(x)
+            # else:
+            #     labels_cpu = torch.full((len(x),1), 1.0, dtype=torch.float, device=device)
+            #     D_current_loss, D_current_acc = D_train(x, labels_cpu)
+
             if batch_idx % k == 0:
                 G_current_loss, G_current_acc = G_train(x)
             else:
@@ -146,7 +158,7 @@ if __name__ == "__main__":
         print('[%d/%d]: loss_d: %.3f, loss_g: %.3f' % (
                 (epoch), n_epoch, np.mean(D_losses[-10:]), np.mean(G_losses[-10:])))
 
-        if (savefile is not None) and (epoch % 2 == 0) and (epoch > 0):
+        if (savefile is not None) and (epoch % 50 == 0) and (epoch > 0):
             torch.save(G.state_dict(), f"saved_models/{savefile}_generator.sav")
             torch.save(D.state_dict(), f"saved_models/{savefile}_discriminator.sav")
             pd.DataFrame(data=np.array([D_losses, G_losses]).T, 
@@ -154,10 +166,10 @@ if __name__ == "__main__":
             pd.DataFrame(data=np.array([D_accs, G_accs]).T, 
                 columns = ["discriminator", "generator"]).to_csv(f"saved_models/{savefile}_accs.csv", index=False)
 
+        if(epoch%100 == 0):
+            # print("Saving epoch " + str(epoch))
+            with torch.no_grad():
+                test_z = torch.randn(4, z_dim).to(device)
+                generated = G(test_z)
 
-    #Output
-    with torch.no_grad():
-        test_z = torch.randn(bs, z_dim).to(device)
-        generated = G(test_z)
-
-        save_image(generated.view(generated.size(0), 3, 224, 224), './generated_batch' + '.png')
+                save_image(generated.view(generated.size(0), 3, 224, 224), './generated_batchs/generated_batch' + str(epoch) + '.png')
