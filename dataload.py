@@ -2,7 +2,7 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from skimage import io, transform
 from torch import is_tensor, from_numpy
-from torchvision import transforms, utils, datasets
+from torchvision import transforms, datasets
 from sklearn.model_selection import train_test_split
 import os
 

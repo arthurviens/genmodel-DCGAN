@@ -1,32 +1,11 @@
 import numpy as np
 import pandas as pd
 import torch
-import torchvision
 import matplotlib.pyplot as plt
-import copy
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
-from skimage import io, transform
-from torchvision import transforms, utils
-import os
-from tqdm import tqdm
+from gan_architecture import ResConvBlock, ResUpConvBlock
 
-
-def init_weights(m):
-    if isinstance(m, nn.Linear):
-        torch.nn.init.xavier_uniform_(m.weight, gain=nn.init.calculate_gain('relu'))
-        m.bias.data.fill_(0.01)
-
-
-def get_n_params(model):
-    pp=0
-    for p in list(model.parameters()):
-        nn=1
-        for s in list(p.size()):
-            nn = nn*s
-        pp += nn
-    return pp
 
 
 class MNIST_Encoder(nn.Module):
@@ -399,96 +378,6 @@ class C_Autoencoder_224(nn.Module):
         x = x.reshape(x.size(0), 3, 224, 224) # reshape this flatten vector to the original image size    
         return x
 
-
-class ResConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1):
-        super(ResConvBlock, self).__init__()
-        if not isinstance(stride, int):
-            raise ValueError(f"Wrong value of stride : {stride}, should be int")
-        if (stride != 1) or (in_channels != out_channels):
-          self.skip = nn.Sequential(
-            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, 
-                        kernel_size=1, stride=stride, bias=False),
-            nn.BatchNorm2d(out_channels))
-        else:
-          self.skip = None
-        # Both self.conv1 and self.downsample layers downsample the input when stride != 1
-
-        self.block = nn.Sequential(
-            nn.Conv2d(in_channels, in_channels, (3,3), 
-                        stride=1, padding=1, bias=False),
-            nn.BatchNorm2d(in_channels),
-            nn.LeakyReLU(inplace=True),
-            nn.Conv2d(in_channels, out_channels, (3,3), 
-                        stride=stride, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels)
-        )
-
-    def forward(self, x):
-        identity = x
-        out = self.block(x)
-
-        if self.skip is not None:
-            identity = self.skip(x)
-
-        out += identity
-        out = F.leaky_relu(out)
-
-        return out
-
-
-class ResUpConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1, padding=None):
-        super(ResUpConvBlock, self).__init__()
-        if not isinstance(stride, int):
-            raise ValueError(f"Wrong value of stride : {stride}, should be int")
-        if (stride != 1):
-            self.skip1 = nn.Upsample(scale_factor=stride, mode="bilinear", align_corners=True)
-        if (in_channels != out_channels):
-            self.skip2 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
-        if (hasattr(self, "skip1")) and (hasattr(self, "skip2")):
-            self.skip = nn.Sequential(
-                self.skip1,
-                self.skip2,
-                nn.BatchNorm2d(out_channels)
-            )
-        elif (hasattr(self, "skip1")) and (not hasattr(self, "skip2")):
-            self.skip = nn.Sequential(
-                self.skip1,
-                nn.BatchNorm2d(out_channels)
-            )
-        elif (not hasattr(self, "skip1")) and (hasattr(self, "skip2")):
-            self.skip = nn.Sequential(
-                self.skip2,
-                nn.BatchNorm2d(out_channels)
-            )
-        else:
-          self.skip = None
-          
-        
-        transpose = nn.ConvTranspose2d(in_channels, out_channels, 2,
-                    stride=stride, padding=1, bias=False)
-
-        self.block = nn.Sequential(
-            nn.ConvTranspose2d(in_channels, in_channels, 2,  
-                        stride=1, bias=False),
-            nn.BatchNorm2d(in_channels),
-            nn.ReLU(inplace=True),
-            transpose,
-            nn.BatchNorm2d(out_channels)
-        )
-
-    def forward(self, x):
-        identity = x
-        out = self.block(x)
-
-        if self.skip is not None:
-            identity = self.skip(x)
-
-        out = torch.add(identity, out)
-        out = F.relu(out)
-
-        return out
 
 
 class Res_Encoder_224(nn.Module):

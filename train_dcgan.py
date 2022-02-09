@@ -1,19 +1,14 @@
-from autoencoder import train
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torchvision import datasets, transforms
-from torch.autograd import Variable
 from torchvision.utils import save_image
-import matplotlib.pyplot as plt
 from dataload import *
-from models import *
+from gan_architecture import *
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
-from sklearn.metrics import accuracy_score
-from autoencoder import get_n_params
+from utils import get_n_params, accuracy, add_noise
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -49,16 +44,6 @@ criterion = nn.BCELoss()
 G_optimizer = optim.Adam(G.parameters(), lr = lr, betas=(beta1, 0.999))
 D_optimizer = optim.Adam(D.parameters(), lr = lr, betas=(beta1, 0.999))
 
-def add_noise(inputs):
-     noise = torch.clip(torch.randn_like(inputs), min=-1, max=1)
-     return inputs + noise
-
-
-def accuracy(y_pred, y_true):
-    y_pred = torch.round(y_pred)
-    right = (y_pred == y_true)
-    return (torch.sum(right) / len(right))
-
 
 def D_train(x):
     #=======================Train the discriminator=======================#
@@ -68,13 +53,19 @@ def D_train(x):
     x_real = x.view(-1, 3, 224 , 224).to(device)
     size = len(x_real)
 
-    #y_real = torch.ones(size, 1).to(device)
-    labels.fill_(1.0)
-
     D_output = D(x_real)
-    D_real_loss = criterion(D_output, labels)
+
+    if size != bs:
+        y_real = torch.ones(size, 1).to(device)
+        D_real_acc = accuracy(D_output, y_real)
+        D_real_loss = criterion(D_output, y_real)
+    else:
+        labels.fill_(1.0)
+        D_real_acc = accuracy(D_output, labels)
+        D_real_loss = criterion(D_output, labels)
+
+
     D_real_loss.backward()
-    D_real_acc = accuracy(D_output, labels)
 
     # train discriminator on fake
     z = torch.randn(size, z_dim).to(device) 
@@ -84,9 +75,14 @@ def D_train(x):
     labels.fill_(0.0)
 
     D_output = D(x_fake)
-    D_fake_loss = criterion(D_output, labels)
+    if size != bs:
+        D_fake_loss = criterion(D_output, y_real)
+        D_fake_acc = accuracy(D_output, y_real)
+    else:
+        D_fake_loss = criterion(D_output, labels)
+        D_fake_acc = accuracy(D_output, labels)
+
     D_fake_loss.backward()
-    D_fake_acc = accuracy(D_output, labels)
     # gradient backprop & optimize ONLY D's parameters
     full_loss = D_real_loss + D_fake_loss
     #D_loss.backward()
