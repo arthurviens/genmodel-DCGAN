@@ -6,8 +6,9 @@ import torch.nn.functional as F
 ##### Resnet blocks
 
 class ResConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1):
+    def __init__(self, in_channels, out_channels, stride=1, activation=F.leaky_relu):
         super(ResConvBlock, self).__init__()
+        self.activation = activation
         if not isinstance(stride, int):
             raise ValueError(f"Wrong value of stride : {stride}, should be int")
         if (stride != 1) or (in_channels != out_channels):
@@ -37,7 +38,7 @@ class ResConvBlock(nn.Module):
             identity = self.skip(x)
 
         out += identity
-        out = F.leaky_relu(out)
+        out = self.activation(out)
 
         return out
 

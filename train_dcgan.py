@@ -25,7 +25,7 @@ train_loader = define_loaders(bs, batch_size_test,
 lr = 0.00008
 beta1 = 0.5
 n_epoch = 3000
-
+save_frequency = 100
 # build network
 z_dim = 1024
 labels = torch.full((bs,1), 1.0, dtype=torch.float, device=device)
@@ -45,7 +45,7 @@ G_optimizer = optim.Adam(G.parameters(), lr = lr, betas=(beta1, 0.999))
 D_optimizer = optim.Adam(D.parameters(), lr = lr, betas=(beta1, 0.999))
 
 
-def D_train(x):#, labels):
+def D_train(x):
     #=======================Train the discriminator=======================#
     D.zero_grad()
 
@@ -90,7 +90,7 @@ def D_train(x):#, labels):
 
     return full_loss.data.item(), ((D_real_acc + D_fake_acc) / 2).item()
 
-def G_train(x):#, labels):
+def G_train(x):
     #=======================Train the generator=======================#
     G.zero_grad()
 
@@ -161,8 +161,7 @@ if __name__ == "__main__":
             pd.DataFrame(data=np.array([D_accs, G_accs]).T, 
                 columns = ["discriminator", "generator"]).to_csv(f"saved_models/{savefile}_accs.csv", index=False)
 
-        if(epoch%100 == 0):
-            # print("Saving epoch " + str(epoch))
+        if(epoch%save_frequency == 0):
             with torch.no_grad():
                 test_z = torch.randn(4, z_dim).to(device)
                 generated = G(test_z)
