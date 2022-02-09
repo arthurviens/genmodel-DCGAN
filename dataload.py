@@ -174,7 +174,7 @@ class Data_Loaders():
                                                Rescale(rescale),
                                                RandomCrop(crop),
                                                ToTensor(),
-                                               transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                               #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                                                #PyTMinMaxScalerVectorized(),
                                                transforms.RandomHorizontalFlip(p=0.5)
                                            ])
@@ -184,7 +184,7 @@ class Data_Loaders():
                                                RandomCrop(crop),
                                                Grayscale(),
                                                ToTensor(),
-                                               transforms.Normalize((0.5), (0.5)),
+                                               #transforms.Normalize((0.5), (0.5)),
                                                #PyTMinMaxScalerVectorized(),
                                                transforms.RandomHorizontalFlip(p=0.5)
                                            ])

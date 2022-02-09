@@ -47,8 +47,8 @@ D = Discriminator().to(device)
 criterion = nn.BCELoss() 
 
 # optimizer
-G_optimizer = optim.Adam(G.parameters(), lr = 0.0001, betas=(beta1, 0.999))
-D_optimizer = optim.Adam(D.parameters(), lr = 0.0004, betas=(beta1, 0.999))
+G_optimizer = optim.Adam(G.parameters(), lr = 0.0001 / 2, betas=(beta1, 0.999))
+D_optimizer = optim.Adam(D.parameters(), lr = 0.0004 / 2, betas=(beta1, 0.999))
 
 
 def D_train(x):
@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     D_losses, G_losses = [0], [0]
     D_accs, G_accs = [0], [0]
-    savefile = 'res-gan'
+    savefile = 'res-gan-2'
 
     if args.resume:
         G.load_state_dict(torch.load(f"saved_models/{savefile}_generator.sav"))
