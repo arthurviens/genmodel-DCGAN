@@ -90,12 +90,12 @@ class ToTensor(object):
 
 class PyTMinMaxScalerVectorized(object):
     """
-    Transforms each channel to the range [0, 1].
+    Transforms each channel to the range [-1, 1].
     """
     def __call__(self, tensor):
-        scale = 1.0 / (tensor.max(dim=1, keepdim=True)[0] - tensor.min(dim=1, keepdim=True)[0]) 
-        tensor.mul_(scale).sub_(tensor.min(dim=1, keepdim=True)[0]) 
-        return ((tensor - 0.5) * 2)
+        v_min, v_max = tensor.min(), tensor.max()
+        tensor = (tensor - v_min)/(v_max - v_min)*(1 - (-1)) + (-1)
+        return tensor
 
 
 class Grayscale(object):
@@ -174,8 +174,8 @@ class Data_Loaders():
                                                Rescale(rescale),
                                                RandomCrop(crop),
                                                ToTensor(),
-                                               #PyTMinMaxScalerVectorized(),
                                                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                               #PyTMinMaxScalerVectorized(),
                                                transforms.RandomHorizontalFlip(p=0.5)
                                            ])
         else:

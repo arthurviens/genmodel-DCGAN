@@ -9,6 +9,7 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from utils import get_n_params, accuracy, add_noise
+import argparse 
 
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -17,18 +18,23 @@ bs = 128
 batch_size_test = 128
 
 train_loader = define_loaders(bs, batch_size_test, 
-                                    rescale=256,
-                                    crop=224,
-                                    rgb=True,
-                                    test_set=False)
+                             rescale=256,
+                             crop=224,
+                             test_set=False,
+                             dataset="data/lhq_256")
 
-lr = 0.00008
+#lr = 0.00008
 beta1 = 0.5
-n_epoch = 3000
-save_frequency = 100
+n_epoch = 30
+save_frequency = 2
 # build network
 z_dim = 1024
-labels = torch.full((bs,1), 1.0, dtype=torch.float, device=device)
+
+
+label_reals = 0.9
+label_fakes = 0.1
+
+labels = torch.full((bs, 1), label_reals, dtype=torch.float, device=device)
 # landscape_dim = 224*224
 
 G = Generator(z_dim).to(device)
@@ -41,8 +47,8 @@ D = Discriminator().to(device)
 criterion = nn.BCELoss() 
 
 # optimizer
-G_optimizer = optim.Adam(G.parameters(), lr = lr, betas=(beta1, 0.999))
-D_optimizer = optim.Adam(D.parameters(), lr = lr, betas=(beta1, 0.999))
+G_optimizer = optim.Adam(G.parameters(), lr = 0.0001, betas=(beta1, 0.999))
+D_optimizer = optim.Adam(D.parameters(), lr = 0.0004, betas=(beta1, 0.999))
 
 
 def D_train(x):
@@ -60,7 +66,7 @@ def D_train(x):
         D_real_acc = accuracy(D_output, y_real)
         D_real_loss = criterion(D_output, y_real)
     else:
-        labels.fill_(1.0)
+        labels.fill_(label_reals)
         D_real_acc = accuracy(D_output, labels)
         D_real_loss = criterion(D_output, labels)
 
@@ -72,7 +78,7 @@ def D_train(x):
     with torch.no_grad():
         #x_fake, y_fake = G(z), torch.zeros(size, 1).to(device)
         x_fake = G(z)
-    labels.fill_(0.0)
+    labels.fill_(label_fakes)
 
     D_output = D(x_fake)
     if size != bs:
@@ -96,7 +102,7 @@ def G_train(x):
 
     z = torch.randn(bs, z_dim).to(device)
     #y = torch.ones(bs, 1).to(device)
-    labels.fill_(1.0)
+    labels.fill_(label_reals)
 
     G_output = G(z)
     D_output = D(G_output)
@@ -107,13 +113,25 @@ def G_train(x):
     G_loss.backward()
     G_optimizer.step()
     
-
     return G_loss.data.item(), G_acc.item()
 
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Process options')
+    parser.add_argument('--resume', action="store_true",
+                        help='Wether or not to continue training')
+
+    args = parser.parse_args()
+
     D_losses, G_losses = [0], [0]
     D_accs, G_accs = [0], [0]
-    savefile = 'res-gan-2'
+    savefile = 'res-gan'
+
+    if args.resume:
+        G.load_state_dict(torch.load(f"saved_models/{savefile}_generator.sav"))
+        D.load_state_dict(torch.load(f"saved_models/{savefile}_discriminator.sav"))
+        print("Resuming training from saved states")
+
     k = 2 # Facteur d'apprentissage discriminateur
 
     print(f'Launching for {n_epoch} epochs...')
@@ -153,7 +171,7 @@ if __name__ == "__main__":
         print('[%d/%d]: loss_d: %.3f, loss_g: %.3f' % (
                 (epoch), n_epoch, np.mean(D_losses[-10:]), np.mean(G_losses[-10:])))
 
-        if (savefile is not None) and (epoch % 50 == 0) and (epoch > 0):
+        if (savefile is not None) and (epoch % save_frequency == 0) and (epoch > 0):
             torch.save(G.state_dict(), f"saved_models/{savefile}_generator.sav")
             torch.save(D.state_dict(), f"saved_models/{savefile}_discriminator.sav")
             pd.DataFrame(data=np.array([D_losses, G_losses]).T, 
