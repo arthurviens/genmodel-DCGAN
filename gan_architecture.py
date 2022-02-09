@@ -43,12 +43,15 @@ class ResConvBlock(nn.Module):
 
 
 class ResUpConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1, padding=None):
+    def __init__(self, in_channels, out_channels, stride=1, padding=0, out_size=None):
         super(ResUpConvBlock, self).__init__()
         if not isinstance(stride, int):
             raise ValueError(f"Wrong value of stride : {stride}, should be int")
         if (stride != 1):
-            self.skip1 = nn.Upsample(scale_factor=stride, mode="bilinear", align_corners=True)
+            if (padding != 0) and (out_size is not None):
+                self.skip1 = nn.Upsample(size=out_size, mode="bilinear", align_corners=True)
+            else:
+                self.skip1 = nn.Upsample(scale_factor=stride, mode="bilinear", align_corners=True)
         if (in_channels != out_channels):
             self.skip2 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
         if (hasattr(self, "skip1")) and (hasattr(self, "skip2")):
@@ -70,16 +73,15 @@ class ResUpConvBlock(nn.Module):
         else:
           self.skip = None
           
-        
-        transpose = nn.ConvTranspose2d(in_channels, out_channels, 2,
-                    stride=stride, padding=1, bias=False)
 
         self.block = nn.Sequential(
             nn.ConvTranspose2d(in_channels, in_channels, 2,  
                         stride=1, bias=False),
             nn.BatchNorm2d(in_channels),
             nn.ReLU(inplace=True),
-            transpose,
+            nn.ConvTranspose2d(in_channels, out_channels, 2,
+                    stride=stride, padding= 1 + padding, 
+                    output_padding = padding, bias=False), 
             nn.BatchNorm2d(out_channels)
         )
 
@@ -111,9 +113,10 @@ class Discriminator(nn.Module):
         super().__init__()
 
         ### Convolutional section
-        self.enc_conv1 = nn.Conv2d(3, 64, (7,7), stride=1, padding=3, bias=False) # 64 * 224 * 224
+        self.block1 = ResConvBlock(3, 64, stride=1)
+        """self.enc_conv1 = nn.Conv2d(3, 64, (7,7), stride=1, padding=3, bias=False) # 64 * 224 * 224
         self.batchnorm1 = nn.BatchNorm2d(64)
-        self.relu1 = nn.ReLU()
+        self.relu1 = nn.ReLU()"""
         self.block2 = ResConvBlock(64, 64, stride=2) # 64 * 112 * 112
         self.block3 = ResConvBlock(64, 128, stride=2) # 128 * 56 * 56
         self.block4 = ResConvBlock(128, 128, stride=2) # 128 * 28 * 28
@@ -133,10 +136,12 @@ class Discriminator(nn.Module):
         )
         
     def forward(self, x):
-        x = self.enc_conv1(x)
+        """x = self.enc_conv1(x)
         if debug: print(f"After enc conv 1 {x.shape}")
         x = self.batchnorm1(x)
-        x = self.relu1(x)
+        x = self.relu1(x)"""
+        x = self.block1(x)
+        if debug: print(f"After block1 {x.shape}")
         x = self.block2(x)
         if debug: print(f"After block2 {x.shape}")
         x = self.block3(x)
@@ -173,9 +178,10 @@ class Generator(nn.Module):
         ### Convolutional section
         self.unflatten = nn.Unflatten(dim=1, unflattened_size=(2048, 2, 2)) # 
         self.block1 = ResUpConvBlock(2048, 1024, stride=2) # 
-        self.dec_convt2 = nn.ConvTranspose2d(1024, 512, 2, stride=2, padding=1, output_padding=1)
+        """self.dec_convt2 = nn.ConvTranspose2d(1024, 512, 2, stride=2, padding=1, output_padding=1)
         self.batchnorm2 = nn.BatchNorm2d(512)
-        self.relu2 = nn.ReLU()
+        self.relu2 = nn.ReLU()"""
+        self.block2 = ResUpConvBlock(1024, 512, stride=2, padding=1, out_size=(7, 7))
         self.block3 = ResUpConvBlock(512, 512, stride=1) # 
         self.block4 = ResUpConvBlock(512, 256, stride=2) # 
         self.block5 = ResUpConvBlock(256, 256, stride=1) # 
@@ -195,11 +201,12 @@ class Generator(nn.Module):
         x = self.unflatten(x)
         if debug: print(f"After unflatten {x.shape}")
         x = self.block1(x)
-        if debug: print(f"After block2 {x.shape}")
-        x = self.dec_convt2(x)
+        if debug: print(f"After block1 {x.shape}")
+        """x = self.dec_convt2(x)
         x = self.batchnorm2(x)
-        x = self.relu2(x)
-        if debug: print(f"After dec_convt1 {x.shape}")
+        x = self.relu2(x)"""
+        x = self.block2(x)
+        if debug: print(f"After block2 {x.shape}")
         x = self.block3(x)
         if debug: print(f"After block3 {x.shape}")
         x = self.block4(x)
