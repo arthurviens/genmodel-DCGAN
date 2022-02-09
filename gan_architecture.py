@@ -43,8 +43,9 @@ class ResConvBlock(nn.Module):
 
 
 class ResUpConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, stride=1, padding=0, out_size=None):
+    def __init__(self, in_channels, out_channels, stride=1, padding=0, out_size=None, activation=F.relu):
         super(ResUpConvBlock, self).__init__()
+        self.activation = activation
         if not isinstance(stride, int):
             raise ValueError(f"Wrong value of stride : {stride}, should be int")
         if (stride != 1):
@@ -93,7 +94,8 @@ class ResUpConvBlock(nn.Module):
             identity = self.skip(x)
 
         out = torch.add(identity, out)
-        out = F.relu(out)
+        # out = F.relu(out)
+        out = self.activation(out)
 
         return out
 
@@ -114,9 +116,6 @@ class Discriminator(nn.Module):
 
         ### Convolutional section
         self.block1 = ResConvBlock(3, 64, stride=1)
-        """self.enc_conv1 = nn.Conv2d(3, 64, (7,7), stride=1, padding=3, bias=False) # 64 * 224 * 224
-        self.batchnorm1 = nn.BatchNorm2d(64)
-        self.relu1 = nn.ReLU()"""
         self.block2 = ResConvBlock(64, 64, stride=2) # 64 * 112 * 112
         self.block3 = ResConvBlock(64, 128, stride=2) # 128 * 56 * 56
         self.block4 = ResConvBlock(128, 128, stride=2) # 128 * 28 * 28
@@ -136,10 +135,6 @@ class Discriminator(nn.Module):
         )
         
     def forward(self, x):
-        """x = self.enc_conv1(x)
-        if debug: print(f"After enc conv 1 {x.shape}")
-        x = self.batchnorm1(x)
-        x = self.relu1(x)"""
         x = self.block1(x)
         if debug: print(f"After block1 {x.shape}")
         x = self.block2(x)
@@ -190,7 +185,7 @@ class Generator(nn.Module):
         self.block8 = ResUpConvBlock(128, 128, stride=2) # 
         self.block9 = ResUpConvBlock(128, 64, stride=2) # 
         self.block10 = ResUpConvBlock(64, 64, stride=1) # 
-        self.block11 = ResUpConvBlock(64, 3, stride=2) # 
+        self.block11 = ResUpConvBlock(64, 3, stride=2, activation=torch.sigmoid) # 
 
 
     def forward(self, x):
@@ -225,5 +220,5 @@ class Generator(nn.Module):
         if debug: print(f"After block10 {x.shape}")
         x = self.block11(x)
         if debug: print(f"After block11 {x.shape}")
-        x = torch.sigmoid(x)
+        #x = torch.sigmoid(x)
         return x
