@@ -32,3 +32,4 @@ def minmax_scale(v, new_min, new_max):
         v_min, v_max = v.min(), v.max()
         v = (v - v_min)/(v_max - v_min)*(new_max - new_min) + new_min
     return v
+    

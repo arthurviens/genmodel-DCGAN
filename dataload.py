@@ -167,7 +167,7 @@ class Data_Loaders():
         ls = os.listdir(root_dir)
 
         if test_set:
-            train_files, test_files = train_test_split(ls, test_size=0.1, shuffle=True, random_state=113)
+            train_files, test_files = train_test_split(ls, test_size=0.05, shuffle=True, random_state=113)
 
         if rgb:
             transformations = transforms.Compose([
@@ -196,13 +196,13 @@ class Data_Loaders():
             self.train_loader = DataLoader(train_set, batch_size = bs_train,
                                         shuffle=True, num_workers=16, prefetch_factor=8)
             self.test_loader = DataLoader(test_set, batch_size = bs_test,
-                                        num_workers=16, prefetch_factor=8)
+                                        num_workers=15, prefetch_factor=8)
 
 
         else:
             train_set = CustomDataset(self.root_dir, ls, transform = transformations) 
             self.train_loader = DataLoader(train_set, batch_size = bs_train,
-                                        shuffle=True, num_workers=16, prefetch_factor=8)
+                                        shuffle=True, num_workers=15, prefetch_factor=8)
                                         
 
 
