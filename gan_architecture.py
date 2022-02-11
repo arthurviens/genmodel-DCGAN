@@ -163,17 +163,17 @@ class Generator(nn.Module):
             )
 
         ### Convolutional section
-        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(2048, 2, 2)) # 
-        self.block1 = ResUpConvBlock(2048, 1024, stride=2) # 
+        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(2048, 2, 2)) # 1024 * 2 * 2
+        self.block1 = ResUpConvBlock(2048, 1024, stride=2) # 1024 * 4 * 4 
         self.block2 = ResUpConvBlock(1024, 512, stride=2, padding=1, out_size=(7, 7)) # 512 * 7 * 7 
         self.block3 = ResUpConvBlock(512, 512, stride=1) # 512 * 7 * 7
         self.block4 = ResUpConvBlock(512, 256, stride=2) # 256 * 14 * 14
         self.block5 = ResUpConvBlock(256, 256, stride=1) # 256 * 14 * 14
         self.block6 = ResUpConvBlock(256, 128, stride=2) # 128 * 28 * 28
         self.block7 = ResUpConvBlock(128, 128, stride=1) # 128 * 28 * 28
-        self.block8 = ResUpConvBlock(128, 128, stride=2) # 
-        self.block9 = ResUpConvBlock(128, 64, stride=2) # 
-        self.block10 = ResUpConvBlock(64, 64, stride=1) # 
+        self.block8 = ResUpConvBlock(128, 128, stride=2) # 128 * 56 * 56
+        self.block9 = ResUpConvBlock(128, 64, stride=2) # 64 * 112 * 112
+        self.block10 = ResUpConvBlock(64, 64, stride=1) # 64 * 112 * 112
         self.block11 = ResUpConvBlock(64, 3, stride=2, activation=torch.sigmoid, last_batchnorm=False) # 
 
 

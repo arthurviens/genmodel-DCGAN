@@ -1,3 +1,9 @@
+import os
+os.environ["OMP_NUM_THREADS"] = "16" # export OMP_NUM_THREADS=1
+os.environ["OPENBLAS_NUM_THREADS"] = "16" # export OPENBLAS_NUM_THREADS=1
+os.environ["MKL_NUM_THREADS"] = "16" # export MKL_NUM_THREADS=1
+os.environ["VECLIB_MAXIMUM_THREADS"] = "16" # export VECLIB_MAXIMUM_THREADS=1
+os.environ["NUMEXPR_NUM_THREADS"] = "16" # export NUMEXPR_NUM_THREADS=1
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -47,8 +53,8 @@ D = Discriminator().to(device)
 criterion = nn.BCELoss() 
 
 # optimizer
-G_optimizer = optim.Adam(G.parameters(), lr = 0.00002, betas=(beta1, 0.999))
-D_optimizer = optim.Adam(D.parameters(), lr = 0.00006, betas=(beta1, 0.999))
+G_optimizer = optim.Adam(G.parameters(), lr = 0.00001, betas=(beta1, 0.999))
+D_optimizer = optim.Adam(D.parameters(), lr = 0.00005, betas=(beta1, 0.999))
 
 
 def D_train(x):
@@ -176,20 +182,19 @@ if __name__ == "__main__":
                 (epoch), n_epoch, np.mean(D_losses[-10:]), np.mean(G_losses[-10:])))
 
 
-        D_test_acc = 0
+        
         with torch.no_grad():
             test_z = torch.randn(4, z_dim).to(device)
             generated = G(test_z)
 
             save_image(generated.view(generated.size(0), 3, 224, 224), './generated_batchs/generated_batch' + str(epoch) + '.png')
-
+            
+            D_test_acc = 0
             for tbatch_idx, (x) in enumerate(tqdm(test_loader)):
-                D.zero_grad()
+                x = x.view(-1, 3, 224 , 224).to(device)
+                size = len(x)
 
-                x_real = x.view(-1, 3, 224 , 224).to(device)
-                size = len(x_real)
-
-                D_output = D(x_real)
+                D_output = D(x)
 
                 if size != bs:
                     y_real = torch.ones(size, 1).to(device)
@@ -199,7 +204,7 @@ if __name__ == "__main__":
                     labels.fill_(label_reals)
                     D_test_acc += (accuracy(D_output, labels) / size)
 
-        D_test_accs.append(D_test_acc)
+            D_test_accs.append(D_test_acc)
         
         if (savefile is not None) and (epoch % save_frequency == 0) and (epoch > 0):
             torch.save(G.state_dict(), f"saved_models/{savefile}_generator.sav")
