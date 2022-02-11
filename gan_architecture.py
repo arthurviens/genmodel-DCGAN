@@ -208,3 +208,30 @@ class Generator(nn.Module):
         if debug: print(f"After block11 {x.shape}")
         #x = torch.sigmoid(x)
         return x
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+def apply_weight_decay(*modules, weight_decay_factor=0., wo_bn=True):
+    '''
+    https://discuss.pytorch.org/t/weight-decay-in-the-optimizers-is-a-bad-idea-especially-with-batchnorm/16994/5
+    Apply weight decay to pytorch model without BN;
+    In pytorch:
+        if group['weight_decay'] != 0:
+            grad = grad.add(p, alpha=group['weight_decay'])
+    p is the param;
+    :param modules:
+    :param weight_decay_factor:
+    :return:
+    '''
+    for module in modules:
+        for m in module.modules():
+            if hasattr(m, 'weight'):
+                if wo_bn and isinstance(m, torch.nn.modules.batchnorm._BatchNorm):
+                    continue
+                m.weight.grad += m.weight * weight_decay_factor
