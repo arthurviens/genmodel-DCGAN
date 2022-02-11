@@ -24,7 +24,7 @@ def accuracy(y_pred, y_true):
     y_pred = torch.round(y_pred)
     y_true = torch.round(y_true)
     right = (y_pred == y_true)
-    return (torch.sum(right) / len(right))
+    return (torch.sum(right) / len(right)).item()
 
 
 def minmax_scale(v, new_min, new_max):

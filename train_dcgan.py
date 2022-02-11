@@ -28,7 +28,7 @@ beta1 = 0.5
 n_epoch = 100
 save_frequency = 2
 # build network
-z_dim = 256
+z_dim = 1024
 
 
 label_reals = 0.9
@@ -95,7 +95,7 @@ def D_train(x):
     #D_loss.backward()
     D_optimizer.step()
 
-    return full_loss.data.item(), ((D_real_acc + D_fake_acc) / 2).item()
+    return full_loss.data.item(), ((D_real_acc + D_fake_acc) / 2)
 
 def G_train(x):
     #=======================Train the generator=======================#
@@ -114,7 +114,7 @@ def G_train(x):
     G_loss.backward()
     G_optimizer.step()
     
-    return G_loss.data.item(), G_acc.item()
+    return G_loss.data.item(), G_acc
 
 
 if __name__ == "__main__":

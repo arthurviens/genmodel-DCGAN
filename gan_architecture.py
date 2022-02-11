@@ -101,21 +101,22 @@ class ResUpConvBlock(nn.Module):
 ################################################################################
 ################################################################################
 
-
 debug=False
 class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
 
         ### Convolutional section
-        self.block1 = ResConvBlock(3, 32, stride=2) # 32 * 112 * 112
-        self.block2 = ResConvBlock(32, 64, stride=2) # 64 * 56 * 56 
-        self.block3 = ResConvBlock(64, 128, stride=2) # 128 * 28 * 28
+        self.block1 = ResConvBlock(3, 64, stride=1) # 64 * 224 * 224
+        self.block2 = ResConvBlock(64, 64, stride=2) # 64 * 112 * 112
+        self.block3 = ResConvBlock(64, 128, stride=2) # 128 * 56 * 56
+        self.block4 = ResConvBlock(128, 128, stride=2) # 128 * 28 * 28
         self.block5 = ResConvBlock(128, 256, stride=2) # 256 * 14 * 14
+        self.block6 = ResConvBlock(256, 256, stride=1) # 256 * 14 * 14
         self.block7 = ResConvBlock(256, 512, stride=2) # 512 * 7 * 7
+        self.block8 = ResConvBlock(512, 512, stride=1) # 512 * 7 * 7
         self.block9 = ResConvBlock(512, 1024, stride=2) # 1024 * 4 * 4
-        self.block11 = ResConvBlock(1024, 2048, stride=4, 
-                                    last_batchnorm=False) # 2048 * 1 * 1
+        self.block10 = ResConvBlock(1024, 2048, stride=4, last_batchnorm=False) # 2048 * 1 * 1
 
         ### Flatten layer
         self.flatten = nn.Flatten(start_dim=1)
@@ -132,14 +133,20 @@ class Discriminator(nn.Module):
         if debug: print(f"After block2 {x.shape}")
         x = self.block3(x)
         if debug: print(f"After block3 {x.shape}")
+        x = self.block4(x)
+        if debug: print(f"After block4 {x.shape}")
         x = self.block5(x)
         if debug: print(f"After block5 {x.shape}")
+        x = self.block6(x)
+        if debug: print(f"After block6 {x.shape}")
         x = self.block7(x)
         if debug: print(f"After block7 {x.shape}")
+        x = self.block8(x)
+        if debug: print(f"After block8 {x.shape}")
         x = self.block9(x)
         if debug: print(f"After block9 {x.shape}")
-        x = self.block11(x)
-        if debug: print(f"After block11 {x.shape}")
+        x = self.block10(x)
+        if debug: print(f"After block10 {x.shape}")
         x = self.flatten(x)
         if debug: print(f"After flatten {x.shape}")
         x = self.discriminator_output(x)
@@ -151,20 +158,23 @@ class Generator(nn.Module):
     def __init__(self, input_dim):
         super().__init__()
         self.generator_lin = nn.Sequential(
-            nn.Linear(input_dim, 2048 * 1 * 1),
+            nn.Linear(input_dim, 2048 * 2 * 2),
             nn.ReLU(True)
             )
 
         ### Convolutional section
-        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(2048, 1, 1)) # 
-        self.block2 = ResUpConvBlock(2048, 1024, stride=4) # 1024 * 4 * 4
-        self.block3 = ResUpConvBlock(1024, 512, stride=2, padding=1, out_size=(7, 7)) # 512 * 7 * 7 
-        self.block5 = ResUpConvBlock(512, 256, stride=2) # 256 * 14 * 14
-        self.block7 = ResUpConvBlock(256, 128, stride=2) # 128 * 28 * 28
-        self.block10 = ResUpConvBlock(128, 64, stride=2) # 64 * 56 * 56
-        self.block11 = ResUpConvBlock(64, 32, stride=2) # 32 * 112 * 112
-        self.block12 = ResUpConvBlock(32, 3, stride=2, activation=torch.sigmoid, 
-                                    last_batchnorm=False) # 3 * 224 * 224
+        self.unflatten = nn.Unflatten(dim=1, unflattened_size=(2048, 2, 2)) # 
+        self.block1 = ResUpConvBlock(2048, 1024, stride=2) # 
+        self.block2 = ResUpConvBlock(1024, 512, stride=2, padding=1, out_size=(7, 7)) # 512 * 7 * 7 
+        self.block3 = ResUpConvBlock(512, 512, stride=1) # 512 * 7 * 7
+        self.block4 = ResUpConvBlock(512, 256, stride=2) # 256 * 14 * 14
+        self.block5 = ResUpConvBlock(256, 256, stride=1) # 256 * 14 * 14
+        self.block6 = ResUpConvBlock(256, 128, stride=2) # 128 * 28 * 28
+        self.block7 = ResUpConvBlock(128, 128, stride=1) # 128 * 28 * 28
+        self.block8 = ResUpConvBlock(128, 128, stride=2) # 
+        self.block9 = ResUpConvBlock(128, 64, stride=2) # 
+        self.block10 = ResUpConvBlock(64, 64, stride=1) # 
+        self.block11 = ResUpConvBlock(64, 3, stride=2, activation=torch.sigmoid, last_batchnorm=False) # 
 
 
     def forward(self, x):
@@ -174,19 +184,27 @@ class Generator(nn.Module):
         if debug: print(f"After decoder_lin {x.shape}")
         x = self.unflatten(x)
         if debug: print(f"After unflatten {x.shape}")
+        x = self.block1(x)
+        if debug: print(f"After block1 {x.shape}")
         x = self.block2(x)
         if debug: print(f"After block2 {x.shape}")
         x = self.block3(x)
         if debug: print(f"After block3 {x.shape}")
+        x = self.block4(x)
+        if debug: print(f"After block4 {x.shape}")
         x = self.block5(x)
         if debug: print(f"After block5 {x.shape}")
+        x = self.block6(x)
+        if debug: print(f"After block6 {x.shape}")
         x = self.block7(x)
         if debug: print(f"After block7 {x.shape}")
+        x = self.block8(x)
+        if debug: print(f"After block8 {x.shape}")
+        x = self.block9(x)
+        if debug: print(f"After block9 {x.shape}")
         x = self.block10(x)
         if debug: print(f"After block10 {x.shape}")
         x = self.block11(x)
         if debug: print(f"After block11 {x.shape}")
-        x = self.block12(x)
-        if debug: print(f"After block12 {x.shape}")
         #x = torch.sigmoid(x)
         return x
