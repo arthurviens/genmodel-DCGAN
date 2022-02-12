@@ -38,7 +38,7 @@ z_dim = 1024
 
 
 label_reals = 0.9
-label_fakes = 0.1
+label_fakes = 0.0
 
 labels = torch.full((bs, 1), label_reals, dtype=torch.float, device=device)
 # landscape_dim = 224*224
@@ -89,8 +89,10 @@ def D_train(x):
 
     D_output = D(x_fake)
     if size != bs:
-        D_fake_loss = criterion(D_output, y_real)
-        D_fake_acc = accuracy(D_output, y_real)
+        y_fake = torch.zeros(size, 1).to(device)
+        y_fake.fill_(label_fakes)
+        D_fake_loss = criterion(D_output, y_fake)
+        D_fake_acc = accuracy(D_output, y_fake)
     else:
         D_fake_loss = criterion(D_output, labels)
         D_fake_acc = accuracy(D_output, labels)
@@ -138,7 +140,7 @@ if __name__ == "__main__":
     D_losses, G_losses = [0], [0]
     D_accs, G_accs = [0], [0]
     D_test_accs = [0] 
-    savefile = 'res-gan-2'
+    savefile = 'res-gan'
 
     if args.resume:
         G.load_state_dict(torch.load(f"saved_models/{savefile}_generator.sav"))
@@ -181,8 +183,6 @@ if __name__ == "__main__":
         print('[%d/%d]: loss_d: %.3f, loss_g: %.3f' % (
                 (epoch), n_epoch, np.mean(D_losses[-10:]), np.mean(G_losses[-10:])))
 
-
-        
         with torch.no_grad():
             test_z = torch.randn(4, z_dim).to(device)
             generated = G(test_z)
@@ -190,6 +190,7 @@ if __name__ == "__main__":
             save_image(generated.view(generated.size(0), 3, 224, 224), './generated_batchs/generated_batch' + str(epoch) + '.png')
             
             D_test_acc = 0
+            batches_accs = []
             for tbatch_idx, (x) in enumerate(tqdm(test_loader)):
                 x = x.view(-1, 3, 224 , 224).to(device)
                 size = len(x)
@@ -199,12 +200,14 @@ if __name__ == "__main__":
                 if size != bs:
                     y_real = torch.ones(size, 1).to(device)
                     y_real.fill_(label_reals)
-                    D_test_acc += (accuracy(D_output, y_real) / size)
+                    batches_accs.append(accuracy(D_output, y_real))
                 else:
                     labels.fill_(label_reals)
-                    D_test_acc += (accuracy(D_output, labels) / size)
+                    batches_accs.append(accuracy(D_output, labels))
 
-            D_test_accs.append(D_test_acc)
+            D_test_accs.append(np.mean(batches_accs))
+            print('[%d/%d]: test_acc: %.3f' % (
+                (epoch), n_epoch, np.mean(batches_accs)))
         
         if (savefile is not None) and (epoch % save_frequency == 0) and (epoch > 0):
             torch.save(G.state_dict(), f"saved_models/{savefile}_generator.sav")
