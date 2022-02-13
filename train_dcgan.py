@@ -20,7 +20,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 ## Data set parameters
 run_test = False
-bs = 128
+bs = 256
 crop_size=128
 
 train_loader, test_loader = define_loaders(bs_train=bs, bs_test=bs, 
@@ -33,10 +33,10 @@ train_loader, test_loader = define_loaders(bs_train=bs, bs_test=bs,
 lrG = 0.00001
 lrD = 0.00005
 beta1 = 0.5
-weight_decay = 0.001
+weight_decay = 0.0001
 
 #Input of generator
-z_dim = 128
+z_dim = 512
 
 #Training parameters
 savefile = 'res-gan'
