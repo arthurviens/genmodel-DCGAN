@@ -216,4 +216,4 @@ def define_loaders(bs_train=16, bs_test=16, rgb=True, rescale=256, crop=224, tes
     if test_set:
         return dataset.train_loader, dataset.test_loader
     else:
-        return dataset.train_loader
+        return dataset.train_loader, None
