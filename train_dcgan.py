@@ -47,7 +47,7 @@ z_dim = 512
 #Training parameters
 savefile = 'res-gan'
 n_epoch = 5000
-save_frequency = 50
+save_frequency = 100
 k = 2 #Facteur d'apprentissage discriminateur
 n_generated_save = 4 #number of images to output at each save_frequency epochs
 
@@ -61,6 +61,8 @@ label_fakes = 0.05
 labels = torch.full((bs, 1), label_reals, dtype=torch.float, device=device)
 
 
+# G = DCGenerator(z_dim).to(device)
+# D = DCDiscriminator().to(device)
 G = Generator(z_dim).to(device)
 D = Discriminator().to(device)
 
@@ -114,7 +116,9 @@ def D_train(x):
     #full_loss.backward()
 
     #regularization
-    apply_weight_decay(*D.modules(), weight_decay_factor=weight_decay, wo_bn=True)
+    if(weight_decay > 0) :
+        apply_weight_decay(*D.modules(), weight_decay_factor=weight_decay, wo_bn=True)
+    
     D_optimizer.step()
 
     return full_loss.data.item(), ((D_real_acc + D_fake_acc) / 2)
@@ -133,7 +137,10 @@ def G_train(x):
 
     # gradient backprop & optimize ONLY G's parameters
     G_loss.backward()
-    apply_weight_decay(*G.modules(), weight_decay_factor=weight_decay, wo_bn=True)
+
+    if(weight_decay > 0) :
+        apply_weight_decay(*G.modules(), weight_decay_factor=weight_decay, wo_bn=True)
+    
     G_optimizer.step()
     
     return G_loss.data.item(), G_acc
@@ -162,12 +169,15 @@ if __name__ == "__main__":
         print("Resuming training from saved states")
         losses = pd.read_csv(f"saved_models/{savefile}_losses.csv")
         acc = pd.read_csv(f"saved_models/{savefile}_accs.csv")
-        testacc = pd.read_csv(f"saved_models/{savefile}_testaccs.csv")
+
+        if(run_test):
+            testacc = pd.read_csv(f"saved_models/{savefile}_testaccs.csv")
+            D_test_accs = testacc["discriminator"].values.tolist()
+        
         D_losses = losses["discriminator"].values.tolist()
         G_losses = losses["generator"].values.tolist()
         D_accs = acc["discriminator"].values.tolist()
         G_accs = acc["generator"].values.tolist()
-        D_test_accs = testacc["discriminator"].values.tolist()
 
     print(f'Launching for {n_epoch} epochs...\nSave frequency = {save_frequency}')
     print(f"Number of parameters : D : {get_n_params(D)}, G : {get_n_params(G)}")
@@ -199,7 +209,7 @@ if __name__ == "__main__":
             generated = G(test_z)
 
             if(epoch % save_frequency == 0):
-                save_image(generated.view(generated.size(0), 3, crop_size, crop_size), './generated_batchs/generated_batch' + str(epoch) + '.png')
+                save_image(generated.view(generated.size(0), 3, crop_size, crop_size), './generated_batchs4200/generated_batch' + str(epoch) + '.png')
             
             if(run_test):
                 D_test_acc = 0
