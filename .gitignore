@@ -4,7 +4,6 @@ fil_rouge/
 *.png
 saved_models/
 .vscode/
-gan.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
