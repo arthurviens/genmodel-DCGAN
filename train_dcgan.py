@@ -1,3 +1,4 @@
+from cProfile import label
 import os
 os.environ["OMP_NUM_THREADS"] = "16" # export OMP_NUM_THREADS=1
 os.environ["OPENBLAS_NUM_THREADS"] = "16" # export OPENBLAS_NUM_THREADS=1
@@ -14,11 +15,12 @@ from gan_architecture import *
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
-from utils import get_n_params, accuracy
+from utils import get_n_params, accuracy, write_params
 import argparse 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 ## Data set parameters
+ds = "data/berry"
 run_test = False
 bs = 256
 crop_size=128
@@ -27,7 +29,11 @@ train_loader, test_loader = define_loaders(bs_train=bs, bs_test=bs,
                             rescale=256,
                             crop=crop_size,
                             test_set=run_test,
-                            dataset="data/berry")
+                            dataset=ds)
+
+
+#Architecture information, only to be printed in params file
+archi_info = "upsamble type : nearest"
 
 #Optimizer parameters
 lrG = 0.00001
@@ -53,6 +59,7 @@ n_midsave = 20
 label_reals = 0.9 
 label_fakes = 0.05
 labels = torch.full((bs, 1), label_reals, dtype=torch.float, device=device)
+
 
 G = Generator(z_dim).to(device)
 D = Discriminator().to(device)
@@ -133,6 +140,10 @@ def G_train(x):
 
 
 if __name__ == "__main__":
+    write_params(savefile, archi_info, lrG, lrD, beta1, weight_decay, z_dim,
+                n_epoch, save_frequency, k, label_fakes, label_reals,
+                ds, run_test, bs, crop_size)
+
     parser = argparse.ArgumentParser(description='Process options')
     parser.add_argument('--resume', action="store_true",
                         help='Wether or not to continue training')
@@ -226,5 +237,4 @@ if __name__ == "__main__":
             torch.save(G.state_dict(), f"saved_models/{savefile}_generator_epoch{epoch}.sav")
             torch.save(D.state_dict(), f"saved_models/{savefile}_discriminator_epoch{epoch}.sav")
 
-                
 

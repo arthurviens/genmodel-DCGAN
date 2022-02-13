@@ -101,9 +101,9 @@ class ResUpConvBlock(nn.Module):
             raise ValueError(f"Wrong value of stride : {stride}, should be int")
         if (stride != 1):
             if (padding != 0) and (out_size is not None):
-                self.skip1 = nn.Upsample(size=out_size, mode="bilinear", align_corners=True)
+                self.skip1 = nn.Upsample(size=out_size, mode="nearest")#, align_corners=True)
             else:
-                self.skip1 = nn.Upsample(scale_factor=stride, mode="bilinear", align_corners=True)
+                self.skip1 = nn.Upsample(scale_factor=stride, mode="nearest")#, align_corners=True)
         if (in_channels != out_channels):
             self.skip2 = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=1)
 
@@ -119,9 +119,9 @@ class ResUpConvBlock(nn.Module):
           
         if (stride != 1):
             if (padding != 0) and (out_size is not None):
-                uplayer = nn.Upsample(size=out_size, mode="bilinear", align_corners=True)
+                uplayer = nn.Upsample(size=out_size, mode="nearest")#, align_corners=True)
             else:
-                uplayer = nn.Upsample(scale_factor=stride, mode="bilinear", align_corners=True)
+                uplayer = nn.Upsample(scale_factor=stride, mode="nearest")#, align_corners=True)
 
 
             layers_block = [nn.Conv2d(in_channels, in_channels, kernel_size=3,  
@@ -231,7 +231,9 @@ class Generator(nn.Module):
         ### Convolutional section
         self.unflatten = nn.Unflatten(dim=1, unflattened_size=(1024, 2, 2)) # 1024 * 2 * 2
         self.block1 = ResUpConvBlock(1024, 512, stride=2) # 512 * 4 * 4 
-        #self.block2 = ResUpConvBlock(1024, 1024, stride=1) # 1024 * 4 * 4 
+        #self.block2 = ResUpConvBlock(1024, 1024, stride=1) # 1024 * 4 * 4
+
+        #COMMENTED OUT TO DO 128X128 IMAGES
         # self.block3 = ResUpConvBlock(512, 512, stride=2, padding=1, out_size=(7, 7)) # 512 * 7 * 7 
         #self.block4 = ResUpConvBlock(512, 512, stride=1) # 512 * 7 * 7
         self.block5 = ResUpConvBlock(512, 256, stride=2) # 256 * 14 * 14
