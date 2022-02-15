@@ -39,7 +39,8 @@ archi_info = "upsamble type : nearest"
 lrG = 0.00001
 lrD = 0.00005
 beta1 = 0.5
-weight_decay = 0.0001
+weight_decayG = 0
+weight_decayD = 0.001
 
 #Input of generator
 z_dim = 512
@@ -49,7 +50,7 @@ savefile = 'res-gan'
 n_epoch = 5000
 save_frequency = 100
 k = 2 #Facteur d'apprentissage discriminateur
-n_generated_save = 4 #number of images to output at each save_frequency epochs
+n_generated_save = 8 #number of images to output at each save_frequency epochs
 
 """if --midsave args is passed is activated, save the
 evolution models every n_midsave epochs"""
@@ -116,8 +117,8 @@ def D_train(x):
     #full_loss.backward()
 
     #regularization
-    if(weight_decay > 0) :
-        apply_weight_decay(*D.modules(), weight_decay_factor=weight_decay, wo_bn=True)
+    if(weight_decayD > 0) :
+        apply_weight_decay(*D.modules(), weight_decay_factor=weight_decayD, wo_bn=True)
     
     D_optimizer.step()
 
@@ -138,8 +139,8 @@ def G_train(x):
     # gradient backprop & optimize ONLY G's parameters
     G_loss.backward()
 
-    if(weight_decay > 0) :
-        apply_weight_decay(*G.modules(), weight_decay_factor=weight_decay, wo_bn=True)
+    if(weight_decayG > 0) :
+        apply_weight_decay(*G.modules(), weight_decay_factor=weight_decayG, wo_bn=True)
     
     G_optimizer.step()
     
@@ -147,7 +148,8 @@ def G_train(x):
 
 
 if __name__ == "__main__":
-    write_params(savefile, archi_info, lrG, lrD, beta1, weight_decay, z_dim,
+    write_params(savefile, archi_info, lrG, lrD, beta1,
+                weight_decayD, weight_decayG, z_dim,
                 n_epoch, save_frequency, k, label_fakes, label_reals,
                 ds, run_test, bs, crop_size)
 
@@ -209,7 +211,7 @@ if __name__ == "__main__":
             generated = G(test_z)
 
             if(epoch % save_frequency == 0):
-                save_image(generated.view(generated.size(0), 3, crop_size, crop_size), './generated_batchs4200/generated_batch' + str(epoch) + '.png')
+                save_image(generated.view(generated.size(0), 3, crop_size, crop_size), './generated_batchs_14000/generated_batch' + str(epoch) + '.png')
             
             if(run_test):
                 D_test_acc = 0

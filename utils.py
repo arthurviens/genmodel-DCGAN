@@ -35,7 +35,8 @@ def minmax_scale(v, new_min, new_max):
     return v
     
 
-def write_params(filename, archi_info, lrG, lrD, beta1, weight_decay, z_dim,
+def write_params(filename, archi_info, lrG, lrD, beta1,
+                weight_decayD, weight_decayG, z_dim,
                 n_epoch, save_frequency, k, label_fakes, label_reals,
                 ds, run_test, bs, crop_size, folder='saved_models'):
                 
@@ -44,8 +45,8 @@ def write_params(filename, archi_info, lrG, lrD, beta1, weight_decay, z_dim,
     string += f"########### ARCHI ###########\nInput dim : {z_dim}\n{archi_info}\n\n"
     string += "########### TRAINING PARAMS ###########\n"
     string += f"Epochs : {n_epoch}\nSave freq : {save_frequency}\nDiscriminator learning factor (k) : {k}\n\n"
-    string += f"########### MODEL PARAMS ###########\nlrG : {lrG}\nlrD : {lrD}\nbeta : {beta1}\nWeight decay (regularization) : {weight_decay}\n"
-    string += f"label_reals : {label_reals}\nlabel_fakes :{label_fakes}"
+    string += f"########### MODEL PARAMS ###########\nlrG : {lrG}\nlrD : {lrD}\nbeta : {beta1}\nWeight decay (regularization) D/G : {weight_decayD} / {weight_decayG}\n"
+    string += f"label_reals : {label_reals}\nlabel_fakes : {label_fakes}"
     
     print(string)
 
