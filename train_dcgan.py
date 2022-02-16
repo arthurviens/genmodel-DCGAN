@@ -73,8 +73,8 @@ criterion = nn.BCELoss()
 G_optimizer = optim.Adam(G.parameters(), lr = lrG, betas=(beta1, 0.999))
 D_optimizer = optim.Adam(D.parameters(), lr = lrD, betas=(beta1, 0.999))
 
-param_dict = {"filename": savefile, "archi_info" : archi_info, "lrG": lrG, 
-            "lrD": lrD, "beta1": beta1, "weight_decay":weight_decayD, "z_dim": z_dim,
+param_dict = {"filename": savefile, "archi_info" : archi_info, "lrG": lrG, "lrD": lrD, 
+            "beta1": beta1, "weight_decayD":weight_decayD, "weight_decayG":weight_decayG, "z_dim": z_dim,
             "n_epoch": n_epoch, "save_frequency": save_frequency, "k": k, 
             "label_fakes": label_fakes, "label_reals": label_reals, "ds": ds, 
             "run_test": run_test, "bs": bs, "crop_size": crop_size, "epoch": 0}

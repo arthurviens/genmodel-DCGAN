@@ -63,7 +63,7 @@ def write_params(p, folder='saved_models', verbose=0):
     string += f"########### ARCHI ###########\nInput dim : {p['z_dim']}\n{p['archi_info']}\n\n"
     string += "########### TRAINING PARAMS ###########\n"
     string += f"Epochs : {p['n_epoch']}\nSave freq : {p['save_frequency']}\nDiscriminator learning factor (k) : {p['k']}\n\n"
-    string += f"########### MODEL PARAMS ###########\nlrG : {p['lrG']}\nlrD : {p['lrD']}\nbeta : {p['beta1']}\nWeight decay (regularization) : {p['weight_decay']}\n"
+    string += f"########### MODEL PARAMS ###########\nlrG : {p['lrG']}\nlrD : {p['lrD']}\nbeta : {p['beta1']}\nWeight decay Discriminator : {p['weight_decayD']}\nWeight decay Generator : {p['weight_decayG']}\n"
     string += f"label_reals : {p['label_reals']}\nlabel_fakes :{p['label_fakes']}\n\n"
     string += f"########### LAST EPOCH ###########\n"
     string += f"Last epoch : {p['epoch']}"
