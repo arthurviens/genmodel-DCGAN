@@ -117,8 +117,8 @@ def D_train(x):
         D_fake_loss = criterion(D_output, labels)
         D_fake_acc = accuracy(D_output, labels)
 
-    D_fake_loss.backward()
     # gradient backprop & optimize ONLY D's parameters
+    D_fake_loss.backward()
     full_loss = D_real_loss + D_fake_loss
     #full_loss.backward()
 
@@ -159,8 +159,14 @@ if __name__ == "__main__":
                         help='Wether or not to continue training')
     parser.add_argument('--midsave', action="store_true",
                         help='Save model evolution (every 20 epochs by default)')
+    parser.add_argument('-name', help='Saved filename of the model')
 
     args = parser.parse_args()
+
+    if args.name == None:
+        raise Exception("Argument '-name' is required")
+    else :
+        savefile = args.name
 
     D_losses, G_losses = [0], [0]
     D_accs, G_accs = [0], [0]
