@@ -24,16 +24,17 @@ ds = "data/berry"
 run_test = False
 bs = 256
 crop_size=128
+rescale=196
 
 train_loader, test_loader = define_loaders(bs_train=bs, bs_test=bs, 
-                            rescale=256,
+                            rescale=rescale,
                             crop=crop_size,
                             test_set=run_test,
                             dataset=ds)
 
 
 #Architecture information, only to be printed in params file
-archi_info = "upsamble type : nearest"
+archi_info = "upsamble type : bilinear"
 
 #Optimizer parameters
 lrG = 0.00001
@@ -46,8 +47,8 @@ weight_decayD = 0.001
 z_dim = 512
 
 #Training parameters
-savefile = 'res-gan'
-n_epoch = 5000
+savefile = 'res-gan-bilinear'
+n_epoch = 15000
 save_frequency = 100
 k = 2 #Facteur d'apprentissage discriminateur
 n_generated_save = 8 #number of images to output at each save_frequency epochs
