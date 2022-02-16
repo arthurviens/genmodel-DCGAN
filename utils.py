@@ -1,5 +1,6 @@
 import torch
 import os
+import pandas as pd
 
 def init_weights(m):
     if isinstance(m, torch.nn.Linear):
@@ -33,24 +34,59 @@ def minmax_scale(v, new_min, new_max):
         v_min, v_max = v.min(), v.max()
         v = (v - v_min)/(v_max - v_min)*(new_max - new_min) + new_min
     return v
+
+
+def apply_weight_decay(*modules, weight_decay_factor=0., wo_bn=True):
+    '''
+    https://discuss.pytorch.org/t/weight-decay-in-the-optimizers-is-a-bad-idea-especially-with-batchnorm/16994/5
+    Apply weight decay to pytorch model without BN;
+    In pytorch:
+        if group['weight_decay'] != 0:
+            grad = grad.add(p, alpha=group['weight_decay'])
+    p is the param;
+    :param modules:
+    :param weight_decay_factor:
+    :return:
+    '''
+    for module in modules:
+        for m in module.modules():
+            if hasattr(m, 'weight'):
+                if wo_bn and isinstance(m, torch.nn.modules.batchnorm._BatchNorm):
+                    continue
+                m.weight.grad += m.weight * weight_decay_factor
+
     
 
-def write_params(filename, archi_info, lrG, lrD, beta1,
-                weight_decayD, weight_decayG, z_dim,
-                n_epoch, save_frequency, k, label_fakes, label_reals,
-                ds, run_test, bs, crop_size, folder='saved_models'):
-                
-
-    string = f"Name : {filename}\n########### GLOBAL ###########\nDS: {ds}\nRun test : {run_test}\nBatch size : {bs}\nCrop_size : {crop_size}\n\n"
-    string += f"########### ARCHI ###########\nInput dim : {z_dim}\n{archi_info}\n\n"
+def write_params(p, folder='saved_models', verbose=0):
+    filename = p['filename']
+    string = f"Name : {p['filename']}\n########### GLOBAL ###########\nDS: {p['ds']}\nRun test : {p['run_test']}\nBatch size : {p['bs']}\nCrop_size : {p['crop_size']}\n\n"
+    string += f"########### ARCHI ###########\nInput dim : {p['z_dim']}\n{p['archi_info']}\n\n"
     string += "########### TRAINING PARAMS ###########\n"
-    string += f"Epochs : {n_epoch}\nSave freq : {save_frequency}\nDiscriminator learning factor (k) : {k}\n\n"
-    string += f"########### MODEL PARAMS ###########\nlrG : {lrG}\nlrD : {lrD}\nbeta : {beta1}\nWeight decay (regularization) D/G : {weight_decayD} / {weight_decayG}\n"
-    string += f"label_reals : {label_reals}\nlabel_fakes : {label_fakes}"
-    
-    print(string)
+    string += f"Epochs : {p['n_epoch']}\nSave freq : {p['save_frequency']}\nDiscriminator learning factor (k) : {p['k']}\n\n"
+    string += f"########### MODEL PARAMS ###########\nlrG : {p['lrG']}\nlrD : {p['lrD']}\nbeta : {p['beta1']}\nWeight decay Discriminator : {p['weight_decayD']}\nWeight decay Generator : {p['weight_decayG']}\n"
+    string += f"label_reals : {p['label_reals']}\nlabel_fakes :{p['label_fakes']}\n\n"
+    string += f"########### LAST EPOCH ###########\n"
+    string += f"Last epoch : {p['epoch']}"
+
+    if verbose:
+        print(string)
+        print()
+        print("#######################\n")
 
     filename += "-PARAMS"
     with open(os.path.join(folder, filename), 'w+') as file :
         file.write(string)
         file.close()
+
+
+def get_epoch_from_log(param_dict, folder='saved_models', verbose=1):
+    with open(os.path.join(folder, param_dict["filename"] + "-PARAMS"), "r") as f:
+        lines = pd.Series(f.readlines())
+    #### Verif paramètres égaux TODO ###
+
+    try:
+        epoch_line = lines[lines.str.startswith("Last epoch")]
+        epoch = int(epoch_line.values[0].split(":")[1])
+        param_dict['epoch'] = epoch
+    except Exception as e:
+        print(f"Could not retrieve epoch from log : {e}")
