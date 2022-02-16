@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torchvision.utils import save_image
+from torchvision.utils import save_image, make_grid
 from dataload import *
 from gan_architecture import *
 from tqdm import tqdm
@@ -51,7 +51,7 @@ savefile = 'res-gan-bilinear'
 n_epoch = 15000
 save_frequency = 100
 k = 2 #Facteur d'apprentissage discriminateur
-n_generated_save = 8 #number of images to output at each save_frequency epochs
+n_generated_save = 9 #number of images to output at each save_frequency epochs
 
 """if --midsave args is passed is activated, save the
 evolution models every n_midsave epochs"""
@@ -74,7 +74,7 @@ G_optimizer = optim.Adam(G.parameters(), lr = lrG, betas=(beta1, 0.999))
 D_optimizer = optim.Adam(D.parameters(), lr = lrD, betas=(beta1, 0.999))
 
 param_dict = {"filename": savefile, "archi_info" : archi_info, "lrG": lrG, 
-            "lrD": lrD, "beta1": beta1, "weight_decay":weight_decay, "z_dim": z_dim,
+            "lrD": lrD, "beta1": beta1, "weight_decay":weight_decayD, "z_dim": z_dim,
             "n_epoch": n_epoch, "save_frequency": save_frequency, "k": k, 
             "label_fakes": label_fakes, "label_reals": label_reals, "ds": ds, 
             "run_test": run_test, "bs": bs, "crop_size": crop_size, "epoch": 0}
@@ -192,6 +192,7 @@ if __name__ == "__main__":
     print(f"Number of parameters : D : {get_n_params(D)}, G : {get_n_params(G)}")
 
     for epoch in range(param_dict["epoch"]+1, n_epoch+1):
+        param_dict["epoch"] = epoch
 
         for batch_idx, (x) in enumerate(tqdm(train_loader)):
             D_current_loss, D_current_acc = D_train(x)
@@ -218,7 +219,7 @@ if __name__ == "__main__":
             generated = G(test_z)
 
             if(epoch % save_frequency == 0):
-                save_image(generated.view(generated.size(0), 3, crop_size, crop_size), './generated_batchs_14000/generated_batch' + str(epoch) + '.png')
+                save_image(make_grid(generated.view(generated.size(0), 3, crop_size, crop_size), nrow=3), './generated_batchs/generated_batch' + str(epoch) + '.png')
             
             if(run_test):
                 D_test_acc = 0
