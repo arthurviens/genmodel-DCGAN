@@ -1,4 +1,3 @@
-from cProfile import label
 import os
 os.environ["OMP_NUM_THREADS"] = "16" # export OMP_NUM_THREADS=1
 os.environ["OPENBLAS_NUM_THREADS"] = "16" # export OPENBLAS_NUM_THREADS=1
@@ -16,18 +15,19 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from utils import get_n_params, accuracy, write_params
+from utils import apply_weight_decay, get_epoch_from_log
 import argparse 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 ## Data set parameters
-ds = "data/berry"
+ds = "data/lhq_256"
 run_test = False
 bs = 256
+rescale_size=150
 crop_size=128
-rescale=196
 
 train_loader, test_loader = define_loaders(bs_train=bs, bs_test=bs, 
-                            rescale=rescale,
+                            rescale=rescale_size,
                             crop=crop_size,
                             test_set=run_test,
                             dataset=ds)
@@ -55,11 +55,11 @@ n_generated_save = 8 #number of images to output at each save_frequency epochs
 
 """if --midsave args is passed is activated, save the
 evolution models every n_midsave epochs"""
-n_midsave = 20
+n_midsave = 100
 
 #Labels for discriminator for fake and real images
 label_reals = 0.9 
-label_fakes = 0.05
+label_fakes = 0.0
 labels = torch.full((bs, 1), label_reals, dtype=torch.float, device=device)
 
 
@@ -73,6 +73,11 @@ criterion = nn.BCELoss()
 G_optimizer = optim.Adam(G.parameters(), lr = lrG, betas=(beta1, 0.999))
 D_optimizer = optim.Adam(D.parameters(), lr = lrD, betas=(beta1, 0.999))
 
+param_dict = {"filename": savefile, "archi_info" : archi_info, "lrG": lrG, 
+            "lrD": lrD, "beta1": beta1, "weight_decay":weight_decay, "z_dim": z_dim,
+            "n_epoch": n_epoch, "save_frequency": save_frequency, "k": k, 
+            "label_fakes": label_fakes, "label_reals": label_reals, "ds": ds, 
+            "run_test": run_test, "bs": bs, "crop_size": crop_size, "epoch": 0}
 
 def D_train(x):
     #=======================Train the discriminator=======================#
@@ -149,11 +154,6 @@ def G_train(x):
 
 
 if __name__ == "__main__":
-    write_params(savefile, archi_info, lrG, lrD, beta1,
-                weight_decayD, weight_decayG, z_dim,
-                n_epoch, save_frequency, k, label_fakes, label_reals,
-                ds, run_test, bs, crop_size)
-
     parser = argparse.ArgumentParser(description='Process options')
     parser.add_argument('--resume', action="store_true",
                         help='Wether or not to continue training')
@@ -165,6 +165,11 @@ if __name__ == "__main__":
     D_losses, G_losses = [0], [0]
     D_accs, G_accs = [0], [0]
     D_test_accs = [0] 
+
+    if args.resume:
+        get_epoch_from_log(param_dict)
+
+    write_params(param_dict, verbose=1)
 
     if args.resume: #loading pretrained model
         G.load_state_dict(torch.load(f"saved_models/{savefile}_generator.sav"))
@@ -181,11 +186,12 @@ if __name__ == "__main__":
         G_losses = losses["generator"].values.tolist()
         D_accs = acc["discriminator"].values.tolist()
         G_accs = acc["generator"].values.tolist()
+    
 
     print(f'Launching for {n_epoch} epochs...\nSave frequency = {save_frequency}')
     print(f"Number of parameters : D : {get_n_params(D)}, G : {get_n_params(G)}")
 
-    for epoch in range(1, n_epoch+1):
+    for epoch in range(param_dict["epoch"]+1, n_epoch+1):
 
         for batch_idx, (x) in enumerate(tqdm(train_loader)):
             D_current_loss, D_current_acc = D_train(x)
@@ -246,8 +252,11 @@ if __name__ == "__main__":
                 pd.DataFrame(data=np.array(D_test_accs).T, 
                     columns = ["discriminator"]).to_csv(f"saved_models/{savefile}_testaccs.csv", index=False)
 
+            write_params(param_dict, verbose=0)
+
         if (savefile is not None) and (epoch % n_midsave == 0) and (epoch > 0) and (args.midsave):
             torch.save(G.state_dict(), f"saved_models/{savefile}_generator_epoch{epoch}.sav")
             torch.save(D.state_dict(), f"saved_models/{savefile}_discriminator_epoch{epoch}.sav")
 
+        
 
