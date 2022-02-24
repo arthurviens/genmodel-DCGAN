@@ -81,12 +81,29 @@ def write_params(p, folder='saved_models', verbose=0):
 
 def get_epoch_from_log(param_dict, folder='saved_models', verbose=1):
     with open(os.path.join(folder, param_dict["filename"] + "-PARAMS"), "r") as f:
-        lines = pd.Series(f.readlines())
+        lines = pd.Series(f.readlines()).str.strip('\n')
+    
     #### Verif paramètres égaux TODO ###
 
-    try:
-        epoch_line = lines[lines.str.startswith("Last epoch")]
-        epoch = int(epoch_line.values[0].split(":")[1])
-        param_dict['epoch'] = epoch
-    except Exception as e:
-        print(f"Could not retrieve epoch from log : {e}")
+    search = {'filename': 'Name', 'archi_info': 'upsample type',
+        'lrG':'lrG', 'lrD': 'lrD', 'beta1': 'beta', 
+        'weight_decayD': 'Weight decay Discriminator',
+        'weight_decayG': 'Weight decay Generator',
+        'k': "Discriminator learning factor (k) : 2",
+        'z_dim': 'Input dim', 'n_epoch': 'Epochs',
+        'save_frequency': 'Save freq', 'label_fakes': 'label_fakes',
+        'label_reals': 'label_reals', 'ds': 'DS', 'run_test': "Run test",
+        'bs': "Batch size", 'crop_size': "Crop_size", 'epoch':"Last epoch"}
+    for param in param_dict.keys():
+        try:
+            line = lines[lines.str.startswith(search[param])]
+            pp = line.values[0].split(":")[1].strip()
+            if param not in ['filename', 'archi_info', 'ds', 'run_test']:
+                pp = float(pp)
+                if int(pp) == pp:
+                    pp = int(pp)
+            param_dict[param] = pp
+        except Exception as e:
+            print(f"Could not retrieve {param} from log : {e}")
+
+    

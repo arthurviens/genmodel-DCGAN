@@ -194,15 +194,17 @@ class Data_Loaders():
             test_set = CustomDataset(self.root_dir, test_files, transform = transformations) 
 
             self.train_loader = DataLoader(train_set, batch_size = bs_train,
-                                        shuffle=True, num_workers=16, prefetch_factor=8)
+                                        shuffle=True, num_workers=16, prefetch_factor=2,
+                                        persistent_workers=True)
             self.test_loader = DataLoader(test_set, batch_size = bs_test,
-                                        num_workers=15, prefetch_factor=8)
+                                        num_workers=15, prefetch_factor=2)
 
 
         else:
             train_set = CustomDataset(self.root_dir, ls, transform = transformations) 
             self.train_loader = DataLoader(train_set, batch_size = bs_train,
-                                        shuffle=True, num_workers=15, prefetch_factor=8)
+                                        shuffle=True, num_workers=15, prefetch_factor=2,
+                                        persistent_workers=True)
 
 
 def apply_weight_decay(*modules, weight_decay_factor=0., wo_bn=True):

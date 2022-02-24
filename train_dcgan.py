@@ -23,8 +23,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ds = "data/lhq_256"
 run_test = False
 bs = 256
-rescale_size=150
-crop_size=128
+rescale_size=280
+crop_size=256
 
 train_loader, test_loader = define_loaders(bs_train=bs, bs_test=bs, 
                             rescale=rescale_size,
@@ -44,13 +44,13 @@ weight_decayG = 0
 weight_decayD = 0.001
 
 #Input of generator
-z_dim = 512
+z_dim = 256
 
 #Training parameters
-savefile = 'res-gan'
+savefile = 'res-gan-2'
 n_epoch = 5000
-save_frequency = 10
-k = 2 #Facteur d'apprentissage discriminateur
+save_frequency = 5
+k = 1 #Facteur d'apprentissage discriminateur
 n_generated_save = 9 #number of images to output at each save_frequency epochs
 
 """if --midsave args is passed is activated, save the
@@ -62,9 +62,6 @@ label_reals = 0.9
 label_fakes = 0.0
 labels = torch.full((bs, 1), label_reals, dtype=torch.float, device=device)
 
-
-# G = DCGenerator(z_dim).to(device)
-# D = DCDiscriminator().to(device)
 G = Generator(z_dim).to(device)
 D = Discriminator().to(device)
 
@@ -73,11 +70,34 @@ criterion = nn.BCELoss()
 G_optimizer = optim.Adam(G.parameters(), lr = lrG, betas=(beta1, 0.999))
 D_optimizer = optim.Adam(D.parameters(), lr = lrD, betas=(beta1, 0.999))
 
+
 param_dict = {"filename": savefile, "archi_info" : archi_info, "lrG": lrG, "lrD": lrD, 
             "beta1": beta1, "weight_decayD":weight_decayD, "weight_decayG":weight_decayG, "z_dim": z_dim,
             "n_epoch": n_epoch, "save_frequency": save_frequency, "k": k, 
             "label_fakes": label_fakes, "label_reals": label_reals, "ds": ds, 
             "run_test": run_test, "bs": bs, "crop_size": crop_size, "epoch": 0}
+
+
+def reinitialize(p):
+    global savefile
+    global lrG 
+    global n_epoch
+    savefile = p['filename']; lrG = p['lrG']; lrD = p['lrD']
+    beta1 = p['beta1']; weight_decayD = p['weight_decayD']
+    weight_decayG = p['weight_decayG']; z_dim = p['z_dim']
+    n_epoch = p['n_epoch']; save_frequency = p["save_frequency"]
+    k = p["k"]; label_fakes = p['label_fakes'];
+    label_reals = p["label_reals"]; ds = p["ds"]
+    run_test = p["run_test"]; bs = p["bs"]; crop_size=["crop_size"]
+    G = Generator(z_dim).to(device)
+    D = Discriminator().to(device)
+
+    criterion = nn.BCELoss() 
+
+    G_optimizer = optim.Adam(G.parameters(), lr = lrG, betas=(beta1, 0.999))
+    D_optimizer = optim.Adam(D.parameters(), lr = lrD, betas=(beta1, 0.999))
+
+
 
 def D_train(x):
     #=======================Train the discriminator=======================#
@@ -169,6 +189,7 @@ if __name__ == "__main__":
 
     if args.resume:
         get_epoch_from_log(param_dict)
+        reinitialize(param_dict)
 
     write_params(param_dict, verbose=1)
 
