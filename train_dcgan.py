@@ -19,10 +19,14 @@ from utils import apply_weight_decay, get_epoch_from_log
 import argparse 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+
+####################################################################
+######################### params definition ########################
+
 ## Data set parameters
 ds = "data/lhq_256"
 run_test = False
-bs = 256
+bs = 400
 rescale_size=150
 crop_size=128
 
@@ -34,17 +38,17 @@ train_loader, test_loader = define_loaders(bs_train=bs, bs_test=bs,
 
 
 #Architecture information, only to be printed in params file
-archi_info = "upsamble type : nearest"
+archi_info = "upsample type : nearest"
 
 #Optimizer parameters
-lrG = 0.00001
+lrG = 0.00002
 lrD = 0.00005
 beta1 = 0.5
 weight_decayG = 0
-weight_decayD = 0.001
+weight_decayD = 0.00001
 
 #Input of generator
-z_dim = 512
+z_dim = 128
 
 #Training parameters
 savefile = 'res-gan'
@@ -63,8 +67,10 @@ label_fakes = 0.0
 labels = torch.full((bs, 1), label_reals, dtype=torch.float, device=device)
 
 
-# G = DCGenerator(z_dim).to(device)
-# D = DCDiscriminator().to(device)
+
+####################################################################
+######################### model definition #########################
+
 G = Generator(z_dim).to(device)
 D = Discriminator().to(device)
 
@@ -85,7 +91,7 @@ def D_train(x):
 
     # train discriminator on real
     x_real = x.view(-1, 3, crop_size , crop_size).to(device)
-    size = len(x_real)
+    size = len(x_real) # length of batch
 
     D_output = D(x_real)
 
@@ -103,7 +109,7 @@ def D_train(x):
 
     # train discriminator on fake
     z = torch.randn(size, z_dim).to(device) 
-    with torch.no_grad():
+    with torch.no_grad(): # Freeze generator weights
         x_fake = G(z)
     labels.fill_(label_fakes)
 
@@ -111,7 +117,7 @@ def D_train(x):
     if size != bs:
         y_fake = torch.zeros(size, 1).to(device)
         y_fake.fill_(label_fakes)
-        D_fake_loss = criterion(D_output, y_fake)
+        D_fake_loss =  criterion(D_output, y_fake)
         D_fake_acc = accuracy(D_output, y_fake)
     else:
         D_fake_loss = criterion(D_output, labels)
@@ -129,6 +135,7 @@ def D_train(x):
     D_optimizer.step()
 
     return full_loss.data.item(), ((D_real_acc + D_fake_acc) / 2)
+
 
 def G_train(x):
     #=======================Train the generator=======================#
@@ -154,7 +161,8 @@ def G_train(x):
 
 
 if __name__ == "__main__":
-    
+    ####################################################################
+    ########################## parse arguments #########################
     parser = argparse.ArgumentParser(description='Process options')
     parser.add_argument('--resume', action="store_true",
                         help='Wether or not to continue training')
@@ -172,6 +180,9 @@ if __name__ == "__main__":
 
     write_params(param_dict, verbose=1)
 
+
+    ####################################################################
+    ################## loads and inits if resuming #####################
     if args.resume: #loading pretrained model
         G.load_state_dict(torch.load(f"saved_models/{savefile}_generator.sav"))
         D.load_state_dict(torch.load(f"saved_models/{savefile}_discriminator.sav"))
@@ -192,6 +203,9 @@ if __name__ == "__main__":
     print(f'Launching for {n_epoch} epochs...\nSave frequency = {save_frequency}')
     print(f"Number of parameters : D : {get_n_params(D)}, G : {get_n_params(G)}")
 
+    
+    ####################################################################
+    ########################### training loop ##########################
     for epoch in range(param_dict["epoch"]+1, n_epoch+1):
         param_dict["epoch"] = epoch
 
@@ -243,6 +257,9 @@ if __name__ == "__main__":
                 print('[%d/%d]: test_acc: %.3f' % (
                     (epoch), n_epoch, np.mean(batches_accs)))
         
+    ####################################################################
+    ######################## saves every x epoch #######################
+
         if (savefile is not None) and (epoch % save_frequency == 0) and (epoch > 0):
             torch.save(G.state_dict(), f"saved_models/{savefile}_generator.sav")
             torch.save(D.state_dict(), f"saved_models/{savefile}_discriminator.sav")

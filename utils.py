@@ -7,6 +7,9 @@ def init_weights(m):
         torch.nn.init.xavier_uniform_(m.weight, gain=torch.nn.init.calculate_gain('relu'))
         m.bias.data.fill_(0.01)
 
+def init_ortho(m):
+    if isinstance(m, torch.nn.Conv2d):
+        torch.nn.init.orthogonal_(m.weight)
 
 def get_n_params(model):
     pp=0
