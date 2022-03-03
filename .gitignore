@@ -1,6 +1,7 @@
 data/*
 *ubyte*
 fil_rouge/
+generated_batch/
 generated_batchs/
 saved_models/
 .vscode/
