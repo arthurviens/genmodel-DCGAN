@@ -24,10 +24,10 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ######################### params definition ########################
 
 ## Data set parameters
-ds = "data/pokemon"
+ds = "data/lhq_256"
 run_test = False
-bs = 400
-rescale_size=150
+bs = 256
+rescale_size=140
 crop_size=128
 
 train_loader, test_loader = define_loaders(bs_train=bs, bs_test=bs, 
@@ -41,20 +41,20 @@ train_loader, test_loader = define_loaders(bs_train=bs, bs_test=bs,
 archi_info = "upsample type : nearest"
 
 #Optimizer parameters
-lrG = 0.00002
-lrD = 0.00005
+lrG = 0.00001
+lrD = 0.00004
 beta1 = 0.5
 weight_decayG = 0
-weight_decayD = 0.00001
+weight_decayD = 0
 
 #Input of generator
 z_dim = 128
 
 #Training parameters
 # savefile = 'res-gan-bilinear'
-n_epoch = 15000
-save_frequency = 50
-k = 1 #Facteur d'apprentissage discriminateur
+n_epoch = 5000
+save_frequency = 10
+k = 2 #Facteur d'apprentissage discriminateur
 n_generated_save = 9 #number of images to output at each save_frequency epochs
 
 """if --midsave args is passed is activated, save the

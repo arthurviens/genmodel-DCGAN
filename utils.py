@@ -73,7 +73,8 @@ def apply_weight_decay(*modules, weight_decay_factor=0., wo_bn=True):
             if hasattr(m, 'weight'):
                 if wo_bn and isinstance(m, torch.nn.modules.batchnorm._BatchNorm):
                     continue
-                m.weight.grad += m.weight * weight_decay_factor
+                if isinstance(m, torch.nn.Linear) or isinstance(m, torch.nn.Conv2d):
+                    m.weight.grad += m.weight * weight_decay_factor
 
     
 
