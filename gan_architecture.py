@@ -10,6 +10,8 @@ def l2normalize(v, eps=1e-12):
 
 
 class SpectralNorm(nn.Module):
+    """ Spectral normalization layer
+    """
     def __init__(self, module, name='weight', power_iterations=1):
         super(SpectralNorm, self).__init__()
         self.module = module
@@ -107,6 +109,16 @@ class Self_Attn(nn.Module):
 
 ##### Resnet blocks with skip connections
 class ResConvBlock(nn.Module):
+    """ Resnet building block that can upsample
+
+    Args:
+        in_channels : number of input channels
+        out_channels : number of wanted output channels
+        stride : factor of downsampling for convolution
+        padding : parameter to control output size
+        activation : activation function 
+        last_batchnorm : True if batchnorm wanted after last layer, false otherwise
+    """
     def __init__(self, in_channels, out_channels, stride=1, activation=F.leaky_relu, last_batchnorm=True):
         super(ResConvBlock, self).__init__()
         self.activation = activation
@@ -146,6 +158,17 @@ class ResConvBlock(nn.Module):
 
 
 class ResUpConvBlock(nn.Module):
+    """ Resnet building block that can upsample
+
+    Args:
+        in_channels : number of input channels
+        out_channels : number of wanted output channels
+        stride : factor of upsampling
+        padding : parameter to control output size 
+        out_size : wanted output size
+        activation : activation function
+        last_batchnorm : True if batchnorm wanted after last layer, false otherwise
+    """
     def __init__(self, in_channels, out_channels, stride=1, padding=0, out_size=None, 
                             activation=F.leaky_relu, last_batchnorm=True):
         super(ResUpConvBlock, self).__init__()
@@ -214,7 +237,7 @@ class ResUpConvBlock(nn.Module):
 ################################################################################
 ################################################################################
 ################################################################################
-################################################################################
+######################### Network Architecture #################################
 ################################################################################
 ################################################################################
 ################################################################################
@@ -225,20 +248,19 @@ class Discriminator(nn.Module):
         super().__init__()
         self.attn = attn
         ### Convolutional section
-        self.block1 = ResConvBlock(3, 64, stride=1) # 64 * 224 * 224     
-        self.block2 = ResConvBlock(64, 64, stride=2) # 64 * 112 * 112
-        self.block3 = ResConvBlock(64, 64, stride=1) # 64 * 112 * 112
-        self.block4 = ResConvBlock(64, 128, stride=2) # 128 * 56 * 56
-        #self.block4 = ResConvBlock(128, 128, stride=1) # 128 * 28 * 28
-        self.block5 = ResConvBlock(128, 128, stride=1) # 128 * 28 * 28
-        self.block6 = ResConvBlock(128, 128, stride=2) # 128 * 28 * 28
-        self.block7 = ResConvBlock(128, 256, stride=2) # 256 * 14 * 14
-        self.block8 = ResConvBlock(256, 256, stride=1) # 256 * 14 * 14
+        self.block1 = ResConvBlock(3, 64, stride=1) # 64 * 128 * 128  
+        self.block2 = ResConvBlock(64, 64, stride=2) # 64 * 64 * 64
+        self.block3 = ResConvBlock(64, 64, stride=1) # 64 * 64 * 64
+        self.block4 = ResConvBlock(64, 128, stride=2) # 128 * 32 * 32
+        self.block5 = ResConvBlock(128, 128, stride=1) # 128 * 32 * 32
+        self.block6 = ResConvBlock(128, 128, stride=2) # 128 * 16 * 16
+        self.block7 = ResConvBlock(128, 256, stride=2) # 256 * 8 * 8
+        self.block8 = ResConvBlock(256, 256, stride=1) # 256 * 8 * 8
         self.attn9 = Self_Attn(256)
-        self.block10 = ResConvBlock(256, 512, stride=2) # 512 * 7 * 7
-        self.block11 = ResConvBlock(512, 512, stride=1) # 512 * 7 * 7
-        self.block12 = ResConvBlock(512, 1024, stride=2, last_batchnorm=False) # 1024 * 4 * 4
-        # self.block10 = ResConvBlock(1024, 1024, stride=2, last_batchnorm=False) # 1024 * 2 * 2
+        self.block10 = ResConvBlock(256, 512, stride=2) # 512 * 4 * 4
+        self.block11 = ResConvBlock(512, 512, stride=1) # 512 * 4 * 4
+        self.block12 = ResConvBlock(512, 1024, stride=2, last_batchnorm=False) # 1024 * 2 * 2
+        
 
         ### Flatten layer
         self.flatten = nn.Flatten(start_dim=1)
@@ -294,21 +316,18 @@ class Generator(nn.Module):
         ### Convolutional section
         self.unflatten = nn.Unflatten(dim=1, unflattened_size=(1024, 2, 2)) # 1024 * 2 * 2
         self.block1 = ResUpConvBlock(1024, 512, stride=2) # 512 * 4 * 4 
-        #self.block2 = ResUpConvBlock(1024, 1024, stride=1) # 1024 * 4 * 4
-
-        #COMMENTED OUT TO DO 128X128 IMAGES
-        # self.block3 = ResUpConvBlock(512, 512, stride=2, padding=1, out_size=(7, 7)) # 512 * 7 * 7 
-        self.block3 = ResUpConvBlock(512, 512, stride=1) # 512 * 7 * 7
-        self.block4 = ResUpConvBlock(512, 256, stride=2) # 256 * 14 * 14
-        self.block5 = ResUpConvBlock(256, 256, stride=1) # 256 * 14 * 14
-        self.block6 = ResUpConvBlock(256, 128, stride=2) # 128 * 28 * 28
-        self.block7 = ResUpConvBlock(128, 128, stride=1) # 128 * 28 * 28
-        self.block8 = ResUpConvBlock(128, 128, stride=2) # 128 * 56 * 56
+        self.block3 = ResUpConvBlock(512, 512, stride=1) # 512 * 4 * 4
+        self.block4 = ResUpConvBlock(512, 256, stride=2) # 256 * 8 * 8
+        self.block5 = ResUpConvBlock(256, 256, stride=1) # 256 * 8 * 8
+        self.block6 = ResUpConvBlock(256, 128, stride=2) # 128 * 16 * 16
+        self.block7 = ResUpConvBlock(128, 128, stride=1) # 128 * 16 * 16
+        self.block8 = ResUpConvBlock(128, 128, stride=2) # 128 * 32 * 32
         self.attn9 = Self_Attn(128)
-        self.block10 = ResUpConvBlock(128, 64, stride=2) # 64 * 112 * 112
-        self.block11 = ResUpConvBlock(64, 64, stride=1) # 64 * 112 * 112
+        self.block10 = ResUpConvBlock(128, 64, stride=2) # 64 * 64 * 64
+        self.block11 = ResUpConvBlock(64, 64, stride=1) # 64 * 64 * 64
 
-        self.block12 = ResUpConvBlock(64, 3, stride=2, activation=torch.sigmoid, last_batchnorm=False) # 
+        self.block12 = ResUpConvBlock(64, 3, stride=2, activation=torch.sigmoid, 
+                    last_batchnorm=False) # 3 * 128 * 128
 
         
 
@@ -321,8 +340,6 @@ class Generator(nn.Module):
         if debug: print(f"After unflatten {x.shape}")
         x = self.block1(x)
         if debug: print(f"After block1 {x.shape}")
-        #x = self.block2(x)
-        #if debug: print(f"After block2 {x.shape}")
         x = self.block3(x)
         if debug: print(f"After block3 {x.shape}")
         x = self.block4(x)
@@ -344,5 +361,4 @@ class Generator(nn.Module):
         if debug: print(f"After block11 {x.shape}")
         x = self.block12(x)
         if debug: print(f"After block12 {x.shape}")
-        #x = torch.sigmoid(x)
         return x

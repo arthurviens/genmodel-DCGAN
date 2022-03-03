@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 import os
 
 
-if not os.path.exists("data/"):
+if not os.path.exists("data/"): # Create dirs if they do not exist
     os.mkdir("data/")
     cwd = os.getcwd()
     joined = os.path.join(cwd, "data")
@@ -15,7 +15,7 @@ if not os.path.exists("data/"):
 
 
 class Rescale(object):
-    """Rescale the image in a sample to a given size.
+    """ Rescale the image in a sample to a given size.
 
     Args:
         output_size (tuple or int): Desired output size. If tuple, output is
@@ -99,8 +99,8 @@ class PyTMinMaxScalerVectorized(object):
 
 
 class Grayscale(object):
+    # Convert image to grayscale
     def __call__(self, image):
-        # Convert image to grayscale
         image = image.sum(axis=2)
         
         return image
@@ -131,6 +131,14 @@ def define_mnist_loaders(bs_train, bs_test):
 
 
 class CustomDataset(Dataset):
+    """ Custom class to create image dataset loader
+    used to retrieve images from files
+
+    Args:
+        files : name of images
+        root_dir : Root dir of the image files
+        transform : Transformations to apply to images
+    """
     def __init__(self, root_dir, files, transform=None):
         self.root_dir = root_dir
         self.files = [os.path.join(root_dir, f) for f in files]
@@ -162,6 +170,18 @@ class CustomDataset(Dataset):
 
 
 class Data_Loaders():
+    """ Hig-level class to manage the custom class loader, 
+    split the train/test loader possibilities and pytorch utilities
+
+    Args:
+        root_dir : root dir of dataset
+        rgb : whether to load in rgb or grayscale
+        rescale : what size to rescale
+        crop : what size of crop to perform
+        bs_train : batch size of train set
+        bs_test : batch size of test set
+        test_set : whether to return a test set loader
+    """
     def __init__(self, root_dir, rgb, rescale, crop, bs_train=16, bs_test=16, test_set=True):
         self.root_dir = root_dir
         ls = os.listdir(root_dir)
@@ -174,7 +194,6 @@ class Data_Loaders():
                                                Rescale(rescale),
                                                RandomCrop(crop),
                                                ToTensor(),
-                                               #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                                                #PyTMinMaxScalerVectorized(),
                                                transforms.RandomHorizontalFlip(p=0.5)
                                            ])
@@ -184,7 +203,6 @@ class Data_Loaders():
                                                RandomCrop(crop),
                                                Grayscale(),
                                                ToTensor(),
-                                               #transforms.Normalize((0.5), (0.5)),
                                                #PyTMinMaxScalerVectorized(),
                                                transforms.RandomHorizontalFlip(p=0.5)
                                            ])
@@ -194,43 +212,31 @@ class Data_Loaders():
             test_set = CustomDataset(self.root_dir, test_files, transform = transformations) 
 
             self.train_loader = DataLoader(train_set, batch_size = bs_train,
-                                        shuffle=True, num_workers=16, prefetch_factor=8)
+                                        shuffle=True, num_workers=16, prefetch_factor=2)
             self.test_loader = DataLoader(test_set, batch_size = bs_test,
-                                        num_workers=15, prefetch_factor=8)
+                                        num_workers=15, prefetch_factor=2)
 
 
         else:
             train_set = CustomDataset(self.root_dir, ls, transform = transformations) 
             self.train_loader = DataLoader(train_set, batch_size = bs_train,
-                                        shuffle=True, num_workers=15, prefetch_factor=8)
-
-
-def apply_weight_decay(*modules, weight_decay_factor=0., wo_bn=True):
-    '''
-    https://discuss.pytorch.org/t/weight-decay-in-the-optimizers-is-a-bad-idea-especially-with-batchnorm/16994/5
-    Apply weight decay to pytorch model without BN;
-    In pytorch:
-        if group['weight_decay'] != 0:
-            grad = grad.add(p, alpha=group['weight_decay'])
-    p is the param;
-    :param modules:
-    :param weight_decay_factor:
-    :return:
-    '''
-    for module in modules:
-        for m in module.modules():
-            if hasattr(m, 'weight'):
-                if wo_bn and isinstance(m, torch.nn.modules.batchnorm._BatchNorm):
-                    continue
-                m.weight.grad += m.weight * weight_decay_factor
-
-
-
+                                        shuffle=True, num_workers=15, prefetch_factor=2)
 
 #data/landscapes
 #data/lhq_256
 #data/berry
 def define_loaders(bs_train=16, bs_test=16, rgb=True, rescale=256, crop=224, test_set=False, dataset="data/berry"):
+    """ Function to call to load any dataset
+
+    Args:
+        rgb : whether to load in rgb or grayscale
+        rescale : what size to rescale
+        crop : what size of crop to perform
+        bs_train : batch size of train set
+        bs_test : batch size of test set
+        test_set : whether to return a test set loader
+        dataset : root dir of the dataset
+    """
     dataset = Data_Loaders(dataset, rgb, rescale, crop, bs_train=bs_train,
                 bs_test=bs_test, test_set=test_set)
 

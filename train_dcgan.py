@@ -234,7 +234,7 @@ if __name__ == "__main__":
             generated = G(test_z)
 
             if(epoch % save_frequency == 0):
-                save_image(make_grid(generated.view(generated.size(0), 3, crop_size, crop_size), nrow=3), './generated_batchs_lhq128/generated_batch' + str(epoch) + '.png')
+                save_image(make_grid(generated.view(generated.size(0), 3, crop_size, crop_size), nrow=3), './generated_batch/generated_batch' + str(epoch) + '.png')
             
             if(run_test):
                 D_test_acc = 0
