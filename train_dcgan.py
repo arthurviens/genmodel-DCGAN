@@ -20,10 +20,10 @@ import argparse
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 ## Data set parameters
-ds = "data/berry"
+ds = "data/pokemon"
 run_test = False
 bs = 256
-rescale_size=150
+rescale_size=129
 crop_size=128
 
 train_loader, test_loader = define_loaders(bs_train=bs, bs_test=bs, 
@@ -34,10 +34,10 @@ train_loader, test_loader = define_loaders(bs_train=bs, bs_test=bs,
 
 
 #Architecture information, only to be printed in params file
-archi_info = "upsamble type : bilinear"
+archi_info = "upsamble type : nearest"
 
 #Optimizer parameters
-lrG = 0.00001
+lrG = 0.000001
 lrD = 0.00005
 beta1 = 0.5
 weight_decayG = 0
@@ -47,10 +47,10 @@ weight_decayD = 0.001
 z_dim = 512
 
 #Training parameters
-savefile = 'res-gan-bilinear'
+# savefile = 'res-gan-bilinear'
 n_epoch = 15000
-save_frequency = 100
-k = 2 #Facteur d'apprentissage discriminateur
+save_frequency = 50
+k = 1 #Facteur d'apprentissage discriminateur
 n_generated_save = 9 #number of images to output at each save_frequency epochs
 
 """if --midsave args is passed is activated, save the
