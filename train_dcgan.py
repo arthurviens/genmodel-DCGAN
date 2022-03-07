@@ -53,7 +53,7 @@ z_dim = 128
 #Training parameters
 # savefile = 'res-gan-bilinear'
 n_epoch = 5000
-save_frequency = 10
+save_frequency = 1
 k = 2 #Facteur d'apprentissage discriminateur
 n_generated_save = 9 #number of images to output at each save_frequency epochs
 

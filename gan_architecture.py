@@ -208,12 +208,12 @@ class ResUpConvBlock(nn.Module):
                 SpectralNorm(nn.Conv2d(in_channels, out_channels, kernel_size=3,
                         stride=1, padding=1, bias=False))]
         else:
-            layers_block = [nn.Conv2d(in_channels, in_channels, kernel_size=3,  
-                stride=1, padding=1, bias=False),
+            layers_block = [SpectralNorm(nn.Conv2d(in_channels, in_channels, kernel_size=3,  
+                stride=1, padding=1, bias=False)),
                 nn.BatchNorm2d(in_channels),
                 nn.ReLU(inplace=True),
-                nn.Conv2d(in_channels, out_channels, kernel_size=3,
-                        stride=1, padding= 1, bias=False)]
+                SpectralNorm(nn.Conv2d(in_channels, out_channels, kernel_size=3,
+                        stride=1, padding= 1, bias=False))]
 
         if last_batchnorm:
             layers_block.append(nn.BatchNorm2d(out_channels))
@@ -269,6 +269,7 @@ class Discriminator(nn.Module):
             nn.Linear(4096, 1),
             nn.Sigmoid()             #fait que la sortie est entre 0 et 1 (bien pour les probabs)
         )
+        #self.discriminator_output.apply(init_ortho)
         
     def forward(self, x):
         if debug: print(f"DISCRIMINATOR {x.shape}")
@@ -313,6 +314,7 @@ class Generator(nn.Module):
             nn.ReLU(True)
             )
 
+        #self.generator_lin.apply(init_ortho)
         ### Convolutional section
         self.unflatten = nn.Unflatten(dim=1, unflattened_size=(1024, 2, 2)) # 1024 * 2 * 2
         self.block1 = ResUpConvBlock(1024, 512, stride=2) # 512 * 4 * 4 

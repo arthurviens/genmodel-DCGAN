@@ -1,3 +1,5 @@
 # GenerativeModels-GAN
 
-Implementation of a GAN in PyTorch
+The report is available on report.ipynb.
+
+![sluggif](fig/sluggif.gif)
