@@ -2,4 +2,4 @@
 
 The report is available on report.ipynb.
 
-![sluggif](fig/sluggif.gif)
+![sluggif](notebooks/fig/sluggif.gif)

@@ -364,3 +364,4 @@ class Generator(nn.Module):
         x = self.block12(x)
         if debug: print(f"After block12 {x.shape}")
         return x
+
