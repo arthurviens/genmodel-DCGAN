@@ -1,22 +1,18 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn import Parameter
 import torchvision
 
 import pytorch_lightning as pl
 from collections import OrderedDict
 
-from src.utils import init_ortho
 from src.gan_architecture import Generator, Discriminator
 from src.dataload import Rescale, RandomCrop, ToTensor, Grayscale, CustomDataset
 
-import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
-from skimage import io, transform
+from torch.utils.data import DataLoader
 from torch import is_tensor, from_numpy
-from torchvision import transforms, datasets
+from torchvision import transforms
 from sklearn.model_selection import train_test_split
 import os
 
@@ -86,7 +82,7 @@ class GANDataModule(pl.LightningDataModule):
         if stage == "test" or stage is None:
             self.mnist_test = MNIST(self.data_dir, train=False, transform=self.transform)
         """
-        ...
+        self.prepare_data()
 
     def train_dataloader(self):
         return DataLoader(
@@ -122,14 +118,20 @@ class GAN(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        # networks
+        self.latent_dim = latent_dim
+        self.lrG = lrG 
+        self.lrD = lrD
+        self.b1 = b1
+        self.b2 = b2
+        self.batch_size = batch_size
+        
         self._data_shape = (channels, width, height)
-        self.generator = Generator(self.hparams.latent_dim, attn=False)
+        self.generator = Generator(latent_dim, attn=False)
         self.discriminator = Discriminator(attn=False)
 
-        self.validation_z = torch.randn(8, self.hparams.latent_dim)
+        self.validation_z = torch.randn(8, latent_dim)
 
-        self.example_input_array = torch.zeros(2, self.hparams.latent_dim)
+        self.example_input_array = torch.zeros(2, latent_dim)
 
     def forward(self, z):
         return self.generator(z)
@@ -139,7 +141,7 @@ class GAN(pl.LightningModule):
 
     def training_step(self, batch, batch_idx, optimizer_idx):
         # sample noise
-        z = torch.randn(batch.shape[0], self.hparams.latent_dim)
+        z = torch.randn(batch.shape[0], self.latent_dim)
         z = z.type_as(batch)
 
         # train generator
@@ -155,6 +157,7 @@ class GAN(pl.LightningModule):
 
             # adversarial loss is binary cross-entropy
             g_loss = self.adversarial_loss(self.discriminator(self.generated_imgs), valid)
+            self.log("g_loss/train", g_loss)
             tqdm_dict = {"g_loss": g_loss}
             output = OrderedDict({"loss": g_loss, "progress_bar": tqdm_dict, "log": tqdm_dict})
             return output
@@ -177,15 +180,16 @@ class GAN(pl.LightningModule):
 
             # discriminator loss is the average of these
             d_loss = (real_loss + fake_loss) / 2
+            self.log("dloss/train", d_loss)
             tqdm_dict = {"d_loss": d_loss}
             output = OrderedDict({"loss": d_loss, "progress_bar": tqdm_dict, "log": tqdm_dict})
             return output
 
     def configure_optimizers(self):
-        lrG = self.hparams.lrG
-        lrD = self.hparams.lrD
-        b1 = self.hparams.b1
-        b2 = self.hparams.b2
+        lrG = self.lrG
+        lrD = self.lrD
+        b1 = self.b1
+        b2 = self.b2
 
         opt_g = torch.optim.Adam(self.generator.parameters(), lr=lrG, betas=(b1, b2))
         opt_d = torch.optim.Adam(self.discriminator.parameters(), lr=lrD, betas=(b1, b2))
