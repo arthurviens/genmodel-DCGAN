@@ -65,7 +65,8 @@ logger = TensorBoardLogger("lightning_logs", name="gan")
 
 
 trainer = Trainer(
-    gpus=[0],
+    gpus=[0, 1],
+    accelerator='dp',
     max_epochs=n_epoch,
     logger=logger
 )
