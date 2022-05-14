@@ -242,7 +242,7 @@ class ResUpConvBlock(nn.Module):
 ################################################################################
 ################################################################################
 
-debug=False
+debug = False
 class Discriminator(nn.Module):
     def __init__(self, attn=True):
         super().__init__()
@@ -308,6 +308,7 @@ class Discriminator(nn.Module):
 class Generator(nn.Module):
     def __init__(self, input_dim, attn=True):
         super().__init__()
+        self.input_dim = input_dim
         self.attn = attn
         self.generator_lin = nn.Sequential(
             nn.Linear(input_dim, 1024 * 2 * 2),
@@ -364,3 +365,4 @@ class Generator(nn.Module):
         x = self.block12(x)
         if debug: print(f"After block12 {x.shape}")
         return x
+

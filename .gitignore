@@ -6,6 +6,7 @@ generated_batchs/
 saved_models/
 .vscode/
 poetry.lock
+lightning_logs/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
