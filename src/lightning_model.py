@@ -11,7 +11,6 @@ from src.dataload import Rescale, RandomCrop, ToTensor, Grayscale, CustomDataset
 
 import torch
 from torch.utils.data import DataLoader
-from torch import is_tensor, from_numpy
 from torchvision import transforms
 from sklearn.model_selection import train_test_split
 import os
@@ -131,7 +130,6 @@ class GAN(pl.LightningModule):
 
         self.validation_z = torch.randn(8, latent_dim)
 
-        self.example_input_array = torch.zeros(2, latent_dim)
 
     def forward(self, z):
         return self.generator(z)
@@ -157,7 +155,7 @@ class GAN(pl.LightningModule):
 
             # adversarial loss is binary cross-entropy
             g_loss = self.adversarial_loss(self.discriminator(self.generated_imgs), valid)
-            self.log("g_loss/train", g_loss)
+            self.log("g_loss/train", g_loss, sync_dist=True)
             tqdm_dict = {"g_loss": g_loss}
             output = OrderedDict({"loss": g_loss, "progress_bar": tqdm_dict, "log": tqdm_dict})
             return output
@@ -180,7 +178,7 @@ class GAN(pl.LightningModule):
 
             # discriminator loss is the average of these
             d_loss = (real_loss + fake_loss) / 2
-            self.log("dloss/train", d_loss)
+            self.log("dloss/train", d_loss, sync_dist=True)
             tqdm_dict = {"d_loss": d_loss}
             output = OrderedDict({"loss": d_loss, "progress_bar": tqdm_dict, "log": tqdm_dict})
             return output
@@ -195,8 +193,8 @@ class GAN(pl.LightningModule):
         opt_d = torch.optim.Adam(self.discriminator.parameters(), lr=lrD, betas=(b1, b2))
         return [opt_g, opt_d], []
 
-    def train_epoch_end(self):
-        z = self.validation_z.type_as(self.generator.model[0].weight)
+    def training_epoch_end(self, training_step_outputs):
+        z = self.validation_z.type_as(self.generator.generator_lin[0].weight)
 
         # log sampled images
         sample_imgs = self(z)
